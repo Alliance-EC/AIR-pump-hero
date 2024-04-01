@@ -203,4 +203,6 @@ void UIfresh_num()
                     30, 1, 1, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, cap->cap_msg_s.CapVot*1000);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, CAP_power);
     }
+    if(1)
+    {}
 }
