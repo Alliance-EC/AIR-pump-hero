@@ -1,0 +1,35 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"power_control.h": "c",
+			"ins_task.h": "c",
+			"remote_control.h": "c",
+			"arm_math.h": "c",
+			"referee_ui.h": "c",
+			"can_comm.h": "c",
+			"general_def.h": "c",
+			"ahrs_middleware.h": "c",
+			"ahrs.h": "c",
+			"robot_cmd.h": "c",
+			"servo_motor.h": "c",
+			"referee_init.h": "c",
+			"task.h": "c",
+			"bsp_dwt.h": "c",
+			"super_cap.h": "c"
+		},
+		"editor.inlineSuggest.showToolbar": "onHover",
+		"clang-format.executable": "E:\\Msys2\\clang64\\bin\\clang-format.exe",
+		"clangd.arguments": [
+			"--compile-commands-dir=build"
+		],
+		"clangd.path": "E:/Msys2/clang64/bin/clangd.exe",
+		"clangd.fallbackFlags": [
+			"E:\\Msys2\\clang64\\include"
+		]
+	}
+}
