@@ -255,10 +255,10 @@ static void RemoteControlSet()
     } else {
 
         // 云台底盘命令
-        gimbal_cmd_send.yaw   = 0.00004f * (float)rc_data[TEMP].rc.rocker_l_;
-        gimbal_cmd_send.pitch = 0.001f * (float)rc_data[TEMP].rc.rocker_l1;
-        chassis_cmd_send.vx   = 50.0f * (float)rc_data[TEMP].rc.rocker_r_; // Chassis_水平方向
-        chassis_cmd_send.vy   = 50.0f * (float)rc_data[TEMP].rc.rocker_r1; // Chassis_竖直方向
+        gimbal_cmd_send.yaw   = 0.0001f * (float)rc_data[TEMP].rc.rocker_l_;
+        gimbal_cmd_send.pitch = 0.002f * (float)rc_data[TEMP].rc.rocker_l1;
+        chassis_cmd_send.vx   = 100.0f * (float)rc_data[TEMP].rc.rocker_r_; // Chassis_水平方向
+        chassis_cmd_send.vy   = 100.0f * (float)rc_data[TEMP].rc.rocker_r1; // Chassis_竖直方向
 
         gimbal_cmd_send.gimbal_mode = GIMBAL_FREE_MODE; // 云台只有两个模式，或停止，或FREE
 
