@@ -198,11 +198,10 @@ void UIfresh_num()
         UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_ADD, 9, Graphic_Color_Yellow,
                     30, 1, 1, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, cap->cap_msg_s.CapVot*1000);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, CAP_power);
+        init_flag=0;
     } else {
         UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow,
                     30, 1, 1, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, cap->cap_msg_s.CapVot*1000);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, CAP_power);
     }
-    if(1)
-    {}
 }

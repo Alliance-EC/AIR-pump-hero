@@ -69,8 +69,6 @@ extern CANCommInstance *upboard_can_comm;
 extern Shoot_Upload_Data_s shoot_feedback_data;
 extern Gimbal_Upload_Data_s gimbal_feedback_data;
 extern Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;
-extern uint8_t Shoot_limit_for_oneshootPC6, Shoot_limit_for_oneshootPE14;
-
 #endif // DEBUG
 
 void RobotTask()
@@ -88,8 +86,6 @@ void RobotTask()
     shoot_cmd_recv    = Data_From_Chassis.shoot_cmd_upload;
 #endif // DEBUG
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
-    Shoot_limit_for_oneshootPC6  = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6);
-    Shoot_limit_for_oneshootPE14 = HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_14);
     GimbalTask();
     ShootTask();
 #endif

@@ -20,19 +20,6 @@ Shoot_Upload_Data_s shoot_feedback_data; // 来自cmd的发射控制信息
 uint8_t Shoot_limit_for_oneshootPC6;
 uint8_t Shoot_limit_for_oneshootPE14;
 uint8_t One_Shoot_flag;
-#ifdef SAMPLING
-uint8_t *flag_complete;
-float *flag_frequnency_now;
-uint8_t store_flag_complete;
-float store_flag_frequnency_now;
-float sampling_result;
-#endif
-
-// dwt定时,计算冷却用
-#ifndef SAMPLING
-static float hibernate_time = 0, dead_time = 0;
-#endif
-
 void ShootInit()
 {
     // 左摩擦轮
@@ -129,11 +116,16 @@ void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
         block_flag = 0;
     Last_verb_Of_load = Now_verb_Of_load;
 }
-
+uint8_t Shoot_flag_AIR = 1;
 /* 机器人发射机构控制核心任务 */
 void ShootTask()
 {
-
+    if (Shoot_flag_AIR) {
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+    }
+    Shoot_limit_for_oneshootPC6 = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6);
     // 从cmd获取控制数据
 #ifdef ONE_BROAD
     SubGetMessage(shoot_sub, &shoot_cmd_recv);
@@ -163,7 +155,6 @@ void ShootTask()
         One_Shoot_flag = 0;
     }
 
-#ifndef SAMPLING
     block_shook_check((loader)->measure.speed_aps);
     if (block_flag == 1) {
         DJIMotorOuterLoop(loader, ANGLE_LOOP);
@@ -185,14 +176,7 @@ void ShootTask()
             } else {
                 DJIMotorSetRef(loader, 0);
             }
-            
-            break;
-        // 三连发,如果不需要后续可能删除
-        case LOAD_3_BULLET:
-            DJIMotorOuterLoop(loader, ANGLE_LOOP);                                             // 切换到速度环
-            DJIMotorSetRef(loader, loader->measure.total_angle + 19 * ONE_BULLET_DELTA_ANGLE); // 增加3发
-            hibernate_time = DWT_GetTimeline_ms();                                             // 记录触发指令的时间
-            dead_time      = 300;                                                              // 完成3发弹丸发射的时间
+
             break;
         // 连发模式,对速度闭环,射频后续修改为可变,目前固定为1Hz
         case LOAD_BURSTFIRE:
@@ -201,8 +185,6 @@ void ShootTask()
                 DJIMotorSetRef(loader, 12000);
             }
             break;
-        // 拨盘反转,对速度闭环,后续增加卡弹检测(通过裁判系统剩余热量反馈和电机电流)
-        // 也有可能需要从switch-case中独立出来
         case LOAD_MODE: // 装弹模式
             if (Shoot_limit_for_oneshootPC6 == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON && block_flag == 0) {
                 DJIMotorOuterLoop(loader, SPEED_LOOP);
@@ -216,48 +198,21 @@ void ShootTask()
         default:
             while (1); // 未知模式,停止运行,检查指针越界,题
     }
-#endif
-    // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)
-    if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-        // 根据收到的弹速设置设定摩擦轮电机参考值,需实测后填入
-        switch (shoot_cmd_recv.bullet_speed) {
-            case SMALL_AMU_30:
-                DJIMotorSetRef(friction_l, -1000);
-                DJIMotorSetRef(friction_r, -1000);
-                break;
-            default: // 当前为了调试设定的默认值4000,因为还没有加入裁判系统无法读取弹速.
-                DJIMotorSetRef(friction_l, 39000);
-                DJIMotorSetRef(friction_r, 39000);
-                break;
-        }
-    } else // 关闭摩擦轮
-    {
-        DJIMotorSetRef(friction_l, 0);
-        DJIMotorSetRef(friction_r, 0);
-    }
-
-    // 开关弹舱盖
-    if (shoot_cmd_recv.lid_mode == LID_CLOSE) {
-        //...
-    } else if (shoot_cmd_recv.lid_mode == LID_OPEN) {
-        //...
-    }
-
-// 反馈数据,目前暂时没有要设定的反馈数据,后续可能增加应用离线监测以及卡弹反馈
+    // // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)
+    // if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+    //     // 根据收到的弹速设置设定摩擦轮电机参考值,需实测后填入
+    //     switch (shoot_cmd_recv.bullet_speed) {
+    //         default: // 当前为了调试设定的默认值4000,因为还没有加入裁判系统无法读取弹速.
+    //             DJIMotorSetRef(friction_l, 39000);
+    //             DJIMotorSetRef(friction_r, 39000);
+    //             break;
+    //     }
+    // } else // 关闭摩擦轮
+    // {
+    //     DJIMotorSetRef(friction_l, 0);
+    //     DJIMotorSetRef(friction_r, 0);
+    // }
 #ifdef ONE_BROAD
     PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
 #endif // DEBUG
-
-#ifdef SAMPLING
-    if (shoot_cmd_recv.shoot_mode == SHOOT_ON) {
-        sampling_result = 5000 * sin_signal_generate(1, 40, 20, flag_complete, flag_frequnency_now);
-        DJIMotorOuterLoop(loader, CURRENT_LOOP);
-        DJIMotorSetRef(loader, sampling_result);
-        store_flag_complete       = *flag_complete;
-        store_flag_frequnency_now = *flag_frequnency_now;
-        if (store_flag_complete == 1) {
-            DJIMotorSetRef(loader, 0);
-        }
-    }
-#endif
 }
