@@ -10,6 +10,7 @@
 #include "general_def.h"
 #include "super_cap.h"
 #include "dji_motor.h"
+#include "buzzer.h"
 // bsp
 #include "bsp_dwt.h"
 #include "bsp_log.h"
@@ -34,7 +35,7 @@ static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
 static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信息,包括控制信息和UI绘制相关
 static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
 static Chassis_Upload_Data_s chassis_send_data_ToUpboard;
-static RC_ctrl_t *rc_data;              // 遥控器数据,初始化时返回
+ RC_ctrl_t *rc_data;              // 遥控器数据,初始化时返回
 static Vision_Recv_s *vision_recv_data; // 视觉接收数据指针,初始化时返回
 
 static Publisher_t *gimbal_cmd_pub;            // 云台控制消息发布者
@@ -111,7 +112,6 @@ static void MouseKeySet()
         chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
         gimbal_cmd_send.gimbal_mode   = GIMBAL_ZERO_FORCE;
         shoot_cmd_send.shoot_mode     = SHOOT_OFF;
-        shoot_cmd_send.friction_mode  = FRICTION_OFF;
         shoot_cmd_send.load_mode      = LOAD_STOP;
     }
     chassis_cmd_send.vy = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000; // 系数待测
@@ -139,19 +139,6 @@ static void MouseKeySet()
     } else {
         One_shoot_flag = 0;
     }
-    switch (rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_V] % 2) // V键开启摩擦轮
-    {
-        case 1:
-            if (shoot_cmd_send.friction_mode != FRICTION_ON) {
-                shoot_cmd_send.friction_mode = FRICTION_ON;
-            }
-            break;
-        case 0:
-            if (shoot_cmd_send.friction_mode == FRICTION_ON) {
-                shoot_cmd_send.friction_mode = FRICTION_OFF;
-            }
-            break;
-    }
     switch (rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 2) // C键开启陀螺模式
     {
         case 1:
@@ -175,28 +162,16 @@ static void MouseKeySet()
 
             break;
     }
-    switch (rc_data[TEMP].mouse.press_l) {
-        case 1:
-            if (shoot_cmd_send.friction_mode == FRICTION_ON) {
-                if (One_shoot_flag == 1) {
-                    shoot_cmd_send.load_mode = LOAD_1_BULLET;
-                } else
-                    shoot_cmd_send.load_mode = LOAD_BURSTFIRE;
-            }
-            break;
-        case 0:
-            shoot_cmd_send.load_mode = LOAD_MODE;
-            break;
-    }
 }
-
+static int8_t start_flag;
+static int8_t air_flag,loader_flag;
 static void RemoteControlSet()
 {
     if ((rc_data[TEMP].rc.switch_left == RC_SW_DOWN) && (rc_data[TEMP].rc.switch_right == RC_SW_DOWN)) {
 
         chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
         gimbal_cmd_send.gimbal_mode   = GIMBAL_ZERO_FORCE;
-        shoot_cmd_send.friction_mode  = FRICTION_OFF;
+        shoot_cmd_send.shoot_mode     = SHOOT_OFF;
         shoot_cmd_send.load_mode      = LOAD_STOP; // 所有电机停止工作
     } else {
 
@@ -224,52 +199,38 @@ static void RemoteControlSet()
         }
 
         // 发射机构命令
-        static int flag_load     = 0;
-        static int flag_friction = 0;
         switch (rc_data[TEMP].rc.switch_left) {
-            case RC_SW_DOWN:
-
-                if (flag_load == 1) {
-                    shoot_cmd_send.load_mode = LOAD_1_BULLET;
-                } else {
-                    shoot_cmd_send.load_mode = LOAD_MODE;
+            case RC_SW_UP:
+                if(start_flag==1)
+                {
+                    if(shoot_cmd_send.shoot_mode==SHOOT_OFF)
+                    shoot_cmd_send.shoot_mode=SHOOT_ON;
+                    else 
+                    {
+                        shoot_cmd_send.shoot_mode=SHOOT_OFF;
+                    }
+                    start_flag=0;
                 }
-
                 break;
             case RC_SW_MID:
-
-                if ((shoot_cmd_send.load_mode == LOAD_BURSTFIRE) || (shoot_cmd_send.load_mode == LOAD_1_BULLET)) {
-                    flag_load                = 1;
-                    shoot_cmd_send.load_mode = LOAD_MODE;
+                if(loader_flag==1)
+                {
+                    shoot_cmd_send.load_mode=LOAD_ON;
+                    loader_flag=0;
                 }
-                if (flag_load == 0) {
-                    flag_load = 1;
-                }
-                if (shoot_cmd_send.friction_mode == FRICTION_ON) {
-                    flag_friction = 0;
-                } else {
-                    flag_friction = 1;
-                }
-                if (shoot_cmd_send.shoot_mode == SHOOT_OFF) {
-                    shoot_cmd_send.shoot_mode = SHOOT_ON;
-                }
-
+                start_flag=1;
+                air_flag=1;
+                shoot_cmd_send.air_pump_mode=AIR_PUMP_OFF;
                 break;
-            case RC_SW_UP:
-
-                if (flag_friction == 1) {
-                    shoot_cmd_send.friction_mode = FRICTION_ON; // 摩擦轮持续转动
-                } else {
-                    shoot_cmd_send.friction_mode = FRICTION_OFF;
+            case RC_SW_DOWN:
+                if(air_flag==1)
+                {
+                    shoot_cmd_send.air_pump_mode=AIR_PUMP_ON;
+                    air_flag=0;
                 }
-
+                loader_flag=1;
+                shoot_cmd_send.load_mode=LOAD_STOP;
                 break;
-            default:
-                break;
-        }
-
-        if (shoot_cmd_send.friction_mode == FRICTION_OFF) {
-            shoot_cmd_send.load_mode = LOAD_STOP;
         }
     }
 }
@@ -282,7 +243,7 @@ static referee_info_t referee_data;
 void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 {
     SubGetMessage(Referee_Data_For_UI, &referee_data);
-    UI_data.fir_mode  = shoot_cmd_send.friction_mode;
+    UI_data.shoot_mode  = shoot_cmd_send.shoot_mode;
     UI_data.rot_mode  = chassis_cmd_send.chassis_mode;
     UI_data.remain_HP = referee_data.GameRobotState.remain_HP;
     UI_data.load_Mode = One_shoot_flag;
@@ -291,8 +252,8 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 
 void RobotCMDTask()
 {
-    // 从其他应用获取回传数据
-#ifdef ONEBROAD
+                // 从其他应用获取回传数据
+#ifdef ONE_BOARD
     SubGetMessage(shoot_feed_sub, &shoot_fetch_data);
     SubGetMessage(gimbal_feed_sub, &gimbal_fetch_data);
 #endif // DEBUG
@@ -314,6 +275,10 @@ void RobotCMDTask()
 #endif // DEBUG
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
+#ifdef ONE_BOARD
+    PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
+    PubPushMessage(shoot_cmd_pub, (void *)&shoot_cmd_send);
+#endif // DEBUG
 }
 #if defined(CHASSIS_BOARD) || defined(ONE_BOARD)
 void UItask(void *argument)
@@ -324,9 +289,22 @@ void UItask(void *argument)
         if (check_to_change_UI(&UI_data) == 1) {
             MyUIRefresh();
         }
-        UIfresh_num();
+        UIfresh_Always();
         osDelay(40);
     }
     /* USER CODE END UItask */
 }
 #endif
+__attribute__((noreturn)) void BuzzerTask(void *argument)
+{
+    UNUSED(argument);
+    while(1){
+        if(shoot_cmd_send.shoot_mode==SHOOT_ON)
+        {
+            buzzer_one_note(Si_freq,0.5);
+            buzzer_one_note(So_freq,0.5);
+            DWT_Delay(0.5);
+        }
+        osDelay(1);
+    }
+}

@@ -311,7 +311,7 @@ void UIIntDraw(Graph_Data_t *graph, char graphname[3], uint32_t Graph_Operate, u
 		fmt需要显示的字符串
 		此函数的实现和具体使用类似于printf函数
 **********************************************************************************************************/
-void UICharDraw(String_Data_t *graph, char graphname[3], uint32_t Graph_Operate, uint32_t Graph_Layer, uint32_t Graph_Color,
+void  UICharDraw(String_Data_t *graph, char graphname[3], uint32_t Graph_Operate, uint32_t Graph_Layer, uint32_t Graph_Color,
 				uint32_t Graph_Size, uint32_t Graph_Width, uint32_t Start_x, uint32_t Start_y, char *fmt, ...)
 {
 	int i;

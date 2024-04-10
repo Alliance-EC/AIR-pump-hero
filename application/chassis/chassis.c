@@ -54,8 +54,7 @@ static PowerControlInstance *power;
 /* 私有函数计算的中介变量,设为静态避免参数传递的开销 */
 static float chassis_vx, chassis_vy;     // 将云台系的速度投影到底盘
 static float vt_lf, vt_rf, vt_lb, vt_rb; // 底盘速度解算后的临时输出,待进行限幅
-static float F_Of_chassis;               // 小陀螺旋转频率；
-static uint8_t signal_of_chassis;        // 小陀螺旋转标志符
+static Chassis_Upload_Data_s chassis_feedback_data;
 extern uint8_t Super_flag;
 void ChassisInit()
 {
@@ -208,10 +207,10 @@ static void LimitChassisOutput()
  */
 static void No_Limit_Control()
 {
-    DJIMotorSetRef(motor_lf, vt_lf );
-    DJIMotorSetRef(motor_rf, vt_rf );
-    DJIMotorSetRef(motor_lb, vt_lb );
-    DJIMotorSetRef(motor_rb, vt_rb );
+    DJIMotorSetRef(motor_lf, vt_lf);
+    DJIMotorSetRef(motor_rf, vt_rf);
+    DJIMotorSetRef(motor_lb, vt_lb);
+    DJIMotorSetRef(motor_rb, vt_rb);
 }
 static void EstimateSpeed()
 {
@@ -237,15 +236,14 @@ void Super_Cap_control()
             cap->cap_msg_g.power_relay_flag = 0;
             time_delay1                     = 0;
         }
-        
-    }
-    else if (Super_Allow_Flag) {
+
+    } else if (Super_Allow_Flag) {
         time_delay++;
         if (time_delay < 60) {
             LimitChassisOutput();
+        } else {
+            No_Limit_Control();
         }
-        else 
-        {No_Limit_Control();}
         cap->cap_msg_g.power_relay_flag = 1;
     } else {
         time_delay = 0;
@@ -258,7 +256,7 @@ void Super_Cap_control()
     }
 }
 
-void Power_level_get()//获取功率裆位
+void Power_level_get() // 获取功率裆位
 {
     if (referee_data->GameRobotState.chassis_power_limit == 55) {
         cap->cap_msg_g.power_level = 2;

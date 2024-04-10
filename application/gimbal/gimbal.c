@@ -20,7 +20,7 @@ static DJIMotorInstance *yaw_motor, *pitch_motor;
 float yaw_input;
 float pitch_input;
 int gimbal_init_flag; // 用于对电机进行初始输入
-#ifdef ONE_BROAD
+#ifdef ONE_BOARD
 static Publisher_t *gimbal_pub;  // 云台应用消息发布者(云台反馈给cmd)
 static Subscriber_t *gimbal_sub; // cmd控制消息订阅者
 #endif                           // DEBUG
@@ -178,7 +178,7 @@ void GimbalInit()
     };
     upboard_can_comm = CANCommInit(&comm_conf);
 #endif // GIMBAL_BOARD
-#ifdef ONE_BROAD
+#ifdef ONE_BOARD
     gimbal_pub = PubRegister("gimbal_feed", sizeof(Gimbal_Upload_Data_s));
     gimbal_sub = SubRegister("gimbal_cmd", sizeof(Gimbal_Ctrl_Cmd_s));
 #endif // DEBUG
@@ -188,7 +188,7 @@ void GimbalTask()
 {
     // 获取云台控制数据
     // 后续增加未收到数据的处理
-#ifdef ONEBROAD
+#ifdef ONE_BOARD
     SubGetMessage(gimbal_sub, &gimbal_cmd_recv);
 #endif // DEBUG
 #ifdef GIMBAL_BOARD
@@ -240,7 +240,7 @@ void GimbalTask()
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
 
     // 推送消息
-#ifdef ONE_BROAD
+#ifdef ONE_BOARD
     PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
 #endif // DEBUG
 #ifdef GIMBAL_BOARD

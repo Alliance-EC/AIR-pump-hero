@@ -10,56 +10,15 @@
 #include <stdint.h>
 
 /* 对于双发射机构的机器人,将下面的数据封装成结构体即可,生成两份shoot应用实例 */
-static DJIMotorInstance *friction_l, *friction_r, *loader; // 拨盘电机
+static DJIMotorInstance *loader; // 拨盘电机
 // static servo_instance *lid; 需要增加弹舱盖
 
 static Publisher_t *shoot_pub;
 Shoot_Ctrl_Cmd_s shoot_cmd_recv; // 来自cmd的发射控制信息
 static Subscriber_t *shoot_sub;
 Shoot_Upload_Data_s shoot_feedback_data; // 来自cmd的发射控制信息
-uint8_t Shoot_limit_for_oneshootPC6;
-uint8_t Shoot_limit_for_oneshootPE14;
-uint8_t One_Shoot_flag;
 void ShootInit()
 {
-    // 左摩擦轮
-    Motor_Init_Config_s friction_config = {
-        .can_init_config = {
-            .can_handle = &hcan1,
-        },
-        .controller_param_init_config = {
-            .speed_PID = {
-                .Kp            = 20, // 20
-                .Ki            = 1,  // 1
-                .Kd            = 0,
-                .Improve       = PID_Integral_Limit,
-                .IntegralLimit = 10000,
-                .MaxOut        = 15000,
-            },
-            .current_PID = {
-                .Kp            = 1.0, // 0.7
-                .Ki            = 0.1, // 0.1
-                .Kd            = 0,
-                .Improve       = PID_Integral_Limit,
-                .IntegralLimit = 10000,
-                .MaxOut        = 15000,
-            },
-        },
-        .controller_setting_init_config = {
-            .angle_feedback_source = MOTOR_FEED,
-            .speed_feedback_source = MOTOR_FEED,
-
-            .outer_loop_type    = SPEED_LOOP,
-            .close_loop_type    = SPEED_LOOP | CURRENT_LOOP,
-            .motor_reverse_flag = MOTOR_DIRECTION_REVERSE,
-        },
-        .motor_type = M3508};
-    friction_config.can_init_config.tx_id = 7;
-    friction_l                            = DJIMotorInit(&friction_config);
-
-    friction_config.can_init_config.tx_id                             = 8; // 右摩擦轮,改txid和方向就行
-    friction_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
-    friction_r                                                        = DJIMotorInit(&friction_config);
 
     // 拨盘电机
     Motor_Init_Config_s loader_config = {
@@ -105,114 +64,67 @@ void ShootInit()
     shoot_pub = PubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
     shoot_sub = SubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
 }
-static float Last_verb_Of_load;
-static uint8_t block_flag = 0;
-void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
-{
-    if (
-        fabs(Now_verb_Of_load) <= (loader)->motor_controller.pid_ref / 200 && fabs(Last_verb_Of_load) <= (loader)->motor_controller.pid_ref / 200 && (loader)->motor_controller.pid_ref != 0) {
-        block_flag = 1;
-    } else
-        block_flag = 0;
-    Last_verb_Of_load = Now_verb_Of_load;
-}
-uint8_t Shoot_flag_AIR = 1;
+static int8_t photogate_state;
 /* 机器人发射机构控制核心任务 */
+One_shoot_control NOW_MODE = {LOAD, 1};
+
+static int8_t tick_num = 0;
+static int8_t One_Shoot_flag, Last_Air_Mode, Last_Load_mode;
+void One_Shoot_Task()
+{
+    if (NOW_MODE.now_step == LOAD) {
+        // 拨弹盘电机控制
+        if (photogate_state == 1) {
+            tick_num = 0;
+        }
+        if (photogate_state == 0) {
+            tick_num++;
+            if (tick_num == 100) { NOW_MODE.now_step = PUSH; }
+        }
+    }
+    if (NOW_MODE.now_step == PUSH) {
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
+        NOW_MODE.now_step = FIRE;
+    }
+    if (NOW_MODE.now_step == FIRE && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON && One_Shoot_flag) {
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+        DWT_Delay(0.6);
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+        DWT_Delay(0.2  );
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+        NOW_MODE.now_step = LOAD;
+        One_Shoot_flag    = 0;
+    }
+}
+
 void ShootTask()
 {
-    if (Shoot_flag_AIR) {
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
-    } else {
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-    }
-    Shoot_limit_for_oneshootPC6 = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6);
+    // PE14 连推弹锤
+    // PC6  连快速排气阀
+    // PC7  光电门 v
     // 从cmd获取控制数据
-#ifdef ONE_BROAD
+#ifdef ONE_BOARD
     SubGetMessage(shoot_sub, &shoot_cmd_recv);
 #endif // ONE_BORAD
 #ifdef GIMBAL_BROAD
 // 在robot.c可以获得值
 #endif // DEBUG
-    // 对shoot mode等于SHOOT_STOP的情况特殊处理,直接停止所有电机(紧急停止)
+    photogate_state = HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_6);
+    if (Last_Load_mode != shoot_cmd_recv.load_mode && shoot_cmd_recv.load_mode == LOAD_ON) {
+        NOW_MODE.now_step = LOAD;
+    }
+    Last_Load_mode = shoot_cmd_recv.load_mode;
+    if (Last_Air_Mode != shoot_cmd_recv.air_pump_mode && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON) {
+        One_Shoot_flag = 1;
+    }
+    Last_Air_Mode = shoot_cmd_recv.air_pump_mode;
     if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
-        DJIMotorStop(friction_l);
-        DJIMotorStop(friction_r);
-        DJIMotorStop(loader);
-    } else // 恢复运行
-    {
-        DJIMotorEnable(friction_l);
-        DJIMotorEnable(friction_r);
-        DJIMotorEnable(loader);
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+    } else {
+        One_Shoot_Task();
     }
-
-    // 如果上一次触发单发或3发指令的时间加上不应期仍然大于当前时间(尚未休眠完毕),直接返回即可
-    // 单发模式主要提供给能量机关激活使用(以及英雄的射击大部分处于单发)
-    // if (hibernate_time + dead_time > DWT_GetTimeline_ms())
-    //     return;
-
-    // 若不在休眠状态,根据robotCMD传来的控制模式进行拨盘电机参考值设定和模式切换
-    if (Shoot_limit_for_oneshootPC6 == 1) {
-        One_Shoot_flag = 0;
-    }
-
-    block_shook_check((loader)->measure.speed_aps);
-    if (block_flag == 1) {
-        DJIMotorOuterLoop(loader, ANGLE_LOOP);
-        DJIMotorSetRef(loader, loader->measure.total_angle + ONE_BULLET_DELTA_ANGLE * 9);
-        DWT_Delay(0.2);
-        block_flag = 0;
-    }
-    switch (shoot_cmd_recv.load_mode) {
-        // 停止拨盘
-        case LOAD_STOP:
-            DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
-            DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
-            break;
-        // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
-        case LOAD_1_BULLET:
-            if (One_Shoot_flag == 1 && block_flag == 0 && shoot_cmd_recv.friction_mode == FRICTION_ON) {
-                DJIMotorOuterLoop(loader, SPEED_LOOP);
-                DJIMotorSetRef(loader, 12000); // 完成1发弹丸发射的时间
-            } else {
-                DJIMotorSetRef(loader, 0);
-            }
-
-            break;
-        // 连发模式,对速度闭环,射频后续修改为可变,目前固定为1Hz
-        case LOAD_BURSTFIRE:
-            if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-                DJIMotorOuterLoop(loader, SPEED_LOOP);
-                DJIMotorSetRef(loader, 12000);
-            }
-            break;
-        case LOAD_MODE: // 装弹模式
-            if (Shoot_limit_for_oneshootPC6 == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON && block_flag == 0) {
-                DJIMotorOuterLoop(loader, SPEED_LOOP);
-                DJIMotorSetRef(loader, 8000); // 完成1发弹丸发射的时间
-            } else {
-                One_Shoot_flag = 1;
-                DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
-                DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
-            }
-            break;
-        default:
-            while (1); // 未知模式,停止运行,检查指针越界,题
-    }
-    // // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)
-    // if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-    //     // 根据收到的弹速设置设定摩擦轮电机参考值,需实测后填入
-    //     switch (shoot_cmd_recv.bullet_speed) {
-    //         default: // 当前为了调试设定的默认值4000,因为还没有加入裁判系统无法读取弹速.
-    //             DJIMotorSetRef(friction_l, 39000);
-    //             DJIMotorSetRef(friction_r, 39000);
-    //             break;
-    //     }
-    // } else // 关闭摩擦轮
-    // {
-    //     DJIMotorSetRef(friction_l, 0);
-    //     DJIMotorSetRef(friction_r, 0);
-    // }
-#ifdef ONE_BROAD
+#ifdef ONE_BOARD
     PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
 #endif // DEBUG
 }

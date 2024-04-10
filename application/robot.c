@@ -40,19 +40,19 @@ void RobotInit()
     __disable_irq();
 
     BSPInit();
-    buzzer_one_note(Do_freq, 0.1f);
-#if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
     RobotCMDInit();
-    buzzer_one_note(Re_freq, 0.1f);
+   // buzzer_one_note(Do_freq, 0.1f);
+#if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
+   // buzzer_one_note(Re_freq, 0.1f);
     ChassisInit();
-    buzzer_one_note(So_freq, 0.1f);
+   // buzzer_one_note(So_freq, 0.1f);
 #endif
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
 
     GimbalInit();
-    buzzer_one_note(Mi_freq, 0.1f);
+   // buzzer_one_note(Mi_freq, 0.1f);
     ShootInit();
-    buzzer_one_note(Fa_freq, 0.1f);
+   // buzzer_one_note(Fa_freq, 0.1f);
 #endif
 
     // 初始化完成,开启中断

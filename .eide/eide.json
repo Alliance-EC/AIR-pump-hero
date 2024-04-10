@@ -11,7 +11,8 @@
     "bsp",
     "Inc",
     "modules",
-    "application/UI"
+    "application/UI",
+    "modules/algorithm"
   ],
   "virtualFolder": {
     "name": "<virtual_root>",
