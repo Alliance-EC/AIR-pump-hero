@@ -45,7 +45,6 @@ referee_info_t *referee_data; // 用于获取裁判系统的数据
 
 SuperCapInstance *cap;                                              // 超级电容
 static DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
-static PowerControlInstance *power;
 // static Chassis_Power_Data_s chassis_power_data;
 
 /* 用于自旋变速策略的时间变量 */
@@ -57,13 +56,12 @@ static float vt_lf, vt_rf, vt_lb, vt_rb; // 底盘速度解算后的临时输出
 static float F_Of_chassis;               // 小陀螺旋转频率；
 static uint8_t signal_of_chassis;        // 小陀螺旋转标志符
 extern uint8_t Super_flag;
+
+
 void ChassisInit()
 {
     // 修改减速比以及最大功率
-    PowerControlInstance power_init = {
-        .coefficient.reduction_ratio = 0.0520746310219994f};
-    power = PowerControlInit(&power_init);
-    // 四个轮子的参数一样,改tx_id和反转标志位即可
+     // 四个轮子的参数一样,改tx_id和反转标志位即可
     Motor_Init_Config_s chassis_motor_config = {
         .can_init_config.can_handle   = &hcan1,
         .controller_param_init_config = {
@@ -162,6 +160,9 @@ static void MecanumCalculate()
  */
 float lf_limit, rf_limit, lb_limit, rb_limit;
 static float Power_Max = 60.0f;
+
+float lf_power, lb_power, rf_power, rb_power;
+float vt_lf_Now, vt_rf_Now, vt_lb_Now, vt_rb_Now;
 static void LimitChassisOutput()
 {
     // 功率限制待添加
@@ -187,18 +188,34 @@ static void LimitChassisOutput()
     //     vt_rb = rb_limit;
     // }新版功率控制待添加
 
+    PowerControlInit(referee_data->GameRobotState.chassis_power_limit, 1);
+
+    lf_power = PowerInputCalc(motor_lf->measure.speed_aps, motor_lf->measure.real_current); 
+    lb_power = PowerInputCalc(motor_lb->measure.speed_aps, motor_lb->measure.real_current); 
+    rf_power = PowerInputCalc(motor_rf->measure.speed_aps, motor_rf->measure.real_current); 
+    rb_power = PowerInputCalc(motor_rb->measure.speed_aps, motor_rb->measure.real_current); 
+    
+    vt_lf_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_lf->measure.speed_aps, motor_lf->measure.real_current, 0, vt_lf);
+    vt_lb_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_lb->measure.speed_aps, motor_lb->measure.real_current, 1, vt_lb);
+    vt_rf_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_rf->measure.speed_aps, motor_rf->measure.real_current, 2, vt_rf);
+    vt_rb_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_rb->measure.speed_aps, motor_rb->measure.real_current, 3, vt_rb);
+
     // 完成功率限制后进行电机参考输入设定
 
-    if (referee_data->PowerHeatData.chassis_power_buffer > Power_Max) {
-        Power_Max = 250.0f;
-    }
-    // 底盘功率控制
-    if (referee_data->PowerHeatData.chassis_power_buffer <= Power_Max) {
-        DJIMotorSetRef(motor_lf, vt_lf * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
-        DJIMotorSetRef(motor_rf, vt_rf * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
-        DJIMotorSetRef(motor_lb, vt_lb * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
-        DJIMotorSetRef(motor_rb, vt_rb * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
-    }
+    // if (referee_data->PowerHeatData.chassis_power_buffer > Power_Max) {
+    //     Power_Max = 250.0f;
+    // }
+    // // 底盘功率控制
+    // if (referee_data->PowerHeatData.chassis_power_buffer <= Power_Max) {
+    //     DJIMotorSetRef(motor_lf, vt_lf * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
+    //     DJIMotorSetRef(motor_rf, vt_rf * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
+    //     DJIMotorSetRef(motor_lb, vt_lb * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
+    //     DJIMotorSetRef(motor_rb, vt_rb * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
+    // }
+         DJIMotorSetRef(motor_lf, vt_lf);
+         DJIMotorSetRef(motor_rf, vt_rf);
+         DJIMotorSetRef(motor_lb, vt_lb);
+         DJIMotorSetRef(motor_rb, vt_rb);
 }
 
 /**

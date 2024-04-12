@@ -1,142 +1,76 @@
 #include "power_control.h"
+#include "arm_math.h"
 #include "message_center.h"
 #include <stdlib.h>
 #include <math.h>
 #include "user_lib.h"
 
-/*功率控制计算部分*/
-/**
- * @brief 将电调力矩电流控制值转换为当前力矩
- *
- * @param coefficient 系数结构体
- * @param motor_output 电调返回的电流值
- *
- * @return present_torque 返回电机当前的力矩值
- */
-float CmdtoTorqueCali(Coefficient_t *coefficient, float motor_output)
+#define MOTOR_LF 0
+#define MOTOR_LB 1
+#define MOTOR_RF 2
+#define MOTOR_RB 3
+
+float k1                = 1.23e-07;
+float k2                = 1.453e-07;
+float constant          = 4.081f;
+float toque_coefficient = 1.99688994e-6f;
+float reduction_ratio, total_power;
+uint16_t max_power;
+void PowerControlInit(uint16_t max_power_init, float reduction_ratio_init)
 {
-    float present_torque, torque_current;
-    torque_current = coefficient->cmd_to_torque * motor_output;
-    present_torque = coefficient->torque * torque_current;
-    return present_torque;
-}
-/**
- * @brief 将目标力矩转换为电调力矩电流控制值
- *
- * @param coefficient 系数结构体
- * @param target_torque 目标力矩值
- *
- * @return motor_input 返回电调力矩电流控制值，用以给电机输入
- */
-float TorquetoCmdCali(Coefficient_t *coefficient, Physical_Quantity_t *physical_quantity)
-{
-    float motor_input, torque_current;
-    torque_current = physical_quantity->target_torque / coefficient->torque;
-    motor_input    = torque_current / coefficient->cmd_to_torque;
-    return motor_input;
-}
-/**
- * @brief 使用转速与当前力矩求解电机当前的总功率
- *
- * @param physical_quantity 求解中用到的物理量
- *
- * @return physical_quantity 返回计算完毕的物理量指针
- */
-float TotalPowerCali(Physical_Quantity_t *physical_quantity, Coefficient_t *coefficient, float motor_output, float motor_speed)
-{
-    physical_quantity->current_torque = CmdtoTorqueCali(coefficient, motor_output);
-    //机械功率Pm=Tω
-    physical_quantity->current_machine_power = physical_quantity->current_torque * motor_speed;
-    // Pin = Pm + k1 * ω^2+ k2 * τ^2 + a
-    physical_quantity->current_total_power = physical_quantity->current_machine_power + (coefficient->k1 * pow(motor_speed, 2)) + (coefficient->k2 * pow(physical_quantity->current_torque, 2)) + coefficient->constant;
-    return physical_quantity->current_total_power;
-}
-/**
- * @brief 使用功率求解目标力矩值
- *
- * @param physical_quantity 求解中用到的物理量
- * @param coefficient 需要用到的参数
- *
- * @return physical_quantity 返回计算完毕的物理量指针
- */
-void TargetTorqueCali(Physical_Quantity_t *physical_quantity, Coefficient_t *coefficient, float motor_speed, float output)
-{
-    int a, b, c;
-    // a=k1
-    a = coefficient->k1;
-    // b=ω(RPM)
-    b = motor_speed;
-    // c=k2*ω^2+a-Pmax
-    c = coefficient->k2 * pow(motor_speed, 2) + coefficient->constant - physical_quantity->max_power;
-    if (output > 0) {
-        physical_quantity->target_torque = (-b + sqrtf((b * b) - (4.0f * a * c))) / (2.0f * a);
-    } else if (output < 0) {
-        physical_quantity->target_torque = (-b - sqrtf((b * b) - (4.0f * a * c))) / (2.0f * a);
-    }
-}
-void PowerDistribution(Physical_Quantity_t *physical_quantity, Coefficient_t *coefficient, float motor_output, float motor_speed)
-{
-    float Pcmd                      = TotalPowerCali(physical_quantity, coefficient, motor_output, motor_speed);
-    coefficient->power_distribution = physical_quantity->max_power / Pcmd;
-    if (coefficient->power_distribution > 1) {
-        physical_quantity->distributed_power = Pcmd;
+    max_power = max_power_init;
+    if (reduction_ratio_init != 0) {
+        reduction_ratio = reduction_ratio_init;
     } else {
-        physical_quantity->distributed_power = coefficient->power_distribution * Pcmd;
+        reduction_ratio = (187.0f / 3591.0f);
     }
 }
-
-/*初始化函数部分*/
-
-/**
- * @brief 对功率计算中需要用到的系数进行初始化设定
- *
- * @param coefficient 需要被初始化的参数结构体
- *
- * @return coefficient 初始化完成的参数结构体
- */
-void *CoefficientInit(Coefficient_t *coefficient)
+float PowerInputCalc(float motor_speed, float motor_current)
 {
-    // coefficient->reduction_ratio = 0.0520746310219994f;
-    //力矩电流与电调力矩电流控制值之间的转化系数，数值由20/16384得到
-    coefficient->cmd_to_torque = 0.001220703125f;
-    //力矩电流常数，为转矩常数与电机减速比相乘得到的转子力矩电流常数
-    coefficient->torque = 0.3f * coefficient->reduction_ratio;
-    //功率模型中力矩二次方的系数
-    coefficient->k1 = 1.23e-07;
-    //功率模型中转速二次方的系数
-    coefficient->k2 = 1.453e-07;
-    //功率模型中的常量
-    coefficient->constant = 4.081f;
-    return coefficient;
+    float power_input = motor_current * toque_coefficient * motor_speed + k2 * motor_speed * motor_speed + k1 * motor_current * motor_current + constant;
+    return power_input;
 }
-
-/*对外可被调用的功率控制接口*/
-/**
- * @brief 功率控制初始化
- *
- * @param power_control_instance 功率控制实例
- */
-PowerControlInstance *PowerControlInit(PowerControlInstance *init)
+float PowerControlCalc(float power_lf, float power_lb, float power_rf, float power_rb, float motor_speed, float motor_current, int which_motor, float aiming_current)
 {
-    PowerControlInstance *instance = (PowerControlInstance *)zmalloc(sizeof(PowerControlInstance));
-
-    instance->coefficient.reduction_ratio = init->coefficient.reduction_ratio;
-
-    CoefficientInit(&instance->coefficient);
-    return instance;
-}
-/**
- * @brief 功率控制主要函数
- *
- * @param power_control_instance 功率控制实例
- * @param motor_output 电机返回的电调力矩电流控制值
- * @param motor_speed 电机返回的电机当前转速
- */
-float PowerControlCalc(PowerControlInstance *power_control_instance, float motor_output, float motor_speed)
-{
-    float motor_input;
-    PowerDistribution(&power_control_instance->physical_quantity, &power_control_instance->coefficient, motor_output, motor_speed);
-    TargetTorqueCali(&power_control_instance->physical_quantity, &power_control_instance->coefficient, motor_speed, motor_output);
-    motor_input = TorquetoCmdCali(&power_control_instance->coefficient, &power_control_instance->physical_quantity);
-    return motor_input;
+    float motor_current_output;
+    float power_data[4];
+    power_data[0] = power_lf;
+    power_data[1] = power_lb;
+    power_data[2] = power_rf;
+    power_data[3] = power_rb;
+    total_power   = 0;
+    for (int i = 0; i < 4; i++) {
+        if (power_data[i] < 0) {
+            continue;
+        } else {
+            total_power += power_data[i];
+        }
+    }
+    if (total_power > max_power) {
+        float power_scale       = max_power / total_power;
+        power_data[which_motor] = power_data[which_motor] * power_scale;
+        if (power_data[which_motor] < 0) {
+            return aiming_current;
+        }
+        float a = k1;
+        float b = toque_coefficient * motor_speed;
+        float c = k2 * motor_speed * motor_speed - power_data[which_motor] + constant;
+        if (motor_current > 0) {
+            float temp = (-b + sqrtf(b * b - 4 * a * c)) / (2 * a);
+            if (temp > 15000) {
+                motor_current_output = 15000;
+            } else {
+                motor_current_output = temp;
+            }
+        } else {
+            float temp = (-b - sqrtf(b * b - 4 * a * c)) / (2 * a);
+            if (temp < -15000) {
+                motor_current_output = -15000;
+            } else {
+                motor_current_output = temp;
+            }
+        }
+        return motor_current_output;
+    }
+    return aiming_current;
 }
