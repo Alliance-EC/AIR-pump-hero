@@ -120,6 +120,7 @@ void ShootInit()
 }
 static float Last_verb_Of_load;
 static uint8_t block_flag = 0;
+static int friction_speed=35000;
 void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
 {
     if (
@@ -128,6 +129,13 @@ void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
     } else
         block_flag = 0;
     Last_verb_Of_load = Now_verb_Of_load;
+}
+void Get_New_friction_speed(int Now_bullet_speed)
+{
+    if(Now_bullet_speed>14.5)
+    {
+        friction_speed=(Target_bullet_speed-Now_bullet_speed)*100;
+    }
 }
 
 /* 机器人发射机构控制核心任务 */
@@ -185,7 +193,7 @@ void ShootTask()
             } else {
                 DJIMotorSetRef(loader, 0);
             }
-            
+
             break;
         // 三连发,如果不需要后续可能删除
         case LOAD_3_BULLET:
@@ -214,22 +222,15 @@ void ShootTask()
             }
             break;
         default:
-            while (1); // 未知模式,停止运行,检查指针越界,题
+            while (1)
+                ; // 未知模式,停止运行,检查指针越界,题
     }
 #endif
     // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)
+    Get_New_friction_speed(shoot_cmd_recv.bullet_speed);
     if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-        // 根据收到的弹速设置设定摩擦轮电机参考值,需实测后填入
-        switch (shoot_cmd_recv.bullet_speed) {
-            case SMALL_AMU_30:
-                DJIMotorSetRef(friction_l, -1000);
-                DJIMotorSetRef(friction_r, -1000);
-                break;
-            default: // 当前为了调试设定的默认值4000,因为还没有加入裁判系统无法读取弹速.
-                DJIMotorSetRef(friction_l, 35000);
-                DJIMotorSetRef(friction_r, 35000);
-                break;
-        }
+        DJIMotorSetRef(friction_l, 35000);
+        DJIMotorSetRef(friction_r, 35000);
     } else // 关闭摩擦轮
     {
         DJIMotorSetRef(friction_l, 0);

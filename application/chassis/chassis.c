@@ -39,7 +39,7 @@ static INS_Instance *Chassis_IMU_data;
 static Publisher_t *chassis_pub;            // 用于发布底盘的数据
 static Subscriber_t *chassis_sub;           // 用于订阅底盘的控制命令                                        // !ONE_BOARD
 static Chassis_Ctrl_Cmd_s chassis_cmd_recv; // 底盘接收到的控制命令
-// static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数据
+static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数据
 static Publisher_t *referee_pub;
 referee_info_t *referee_data; // 用于获取裁判系统的数据
 
@@ -358,6 +358,9 @@ void ChassisTask()
         MyUIInit();
         UIflag = 0;
     }
+#ifdef CHASSIS_BOARD
+    
+#endif // DEBUG 
 #ifdef ONE_BOARD
     PubPushMessage(chassis_pub, (void *)&chassis_feedback_data);
 #endif

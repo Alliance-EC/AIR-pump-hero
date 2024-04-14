@@ -20,7 +20,8 @@
 			"referee_init.h": "c",
 			"task.h": "c",
 			"bsp_dwt.h": "c",
-			"super_cap.h": "c"
+			"super_cap.h": "c",
+			"dji_motor.h": "c"
 		},
 		"editor.inlineSuggest.showToolbar": "onHover",
 		"clang-format.executable": "E:\\Msys2\\clang64\\bin\\clang-format.exe",

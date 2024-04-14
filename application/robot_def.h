@@ -38,6 +38,7 @@
 #define ONE_BULLET_DELTA_ANGLE 70    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
 #define REDUCTION_RATIO_LOADER 49.0f // 拨盘电机的减速比,英雄需要修改为3508的19.0f
 #define NUM_PER_CIRCLE         10    // 拨盘一圈的装载量
+#define Target_bullet_speed    15.8
 // 机器人底盘修改的参数,单位为mm(毫米)
 #define WHEEL_BASE             630   // 纵向轴距(前进后退方向)
 #define TRACK_WIDTH            508   // 横向轮距(左右平移方向)
@@ -169,7 +170,7 @@ typedef struct
     loader_mode_e load_mode;
     lid_mode_e lid_mode;
     friction_mode_e friction_mode;
-    Bullet_Speed_limit_e bullet_speed; // 弹速枚举
+    float bullet_speed;
     uint8_t rest_heat;
     float shoot_rate; // 连续发射的射频,unit per s,发/秒
 } Shoot_Ctrl_Cmd_s;

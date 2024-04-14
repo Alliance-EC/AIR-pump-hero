@@ -352,7 +352,6 @@ static void RemoteControlSet()
 static referee_info_t referee_data;
 void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 {
-    SubGetMessage(Referee_Data_For_UI, &referee_data);
     UI_data.fir_mode  = shoot_cmd_send.friction_mode;
     UI_data.rot_mode  = chassis_cmd_send.chassis_mode;
     UI_data.remain_HP = referee_data.GameRobotState.remain_HP;
@@ -373,37 +372,13 @@ void RobotCMDTask()
     gimbal_fetch_data = data_from_upboard.Gimbal_data;
 #endif // DEBUG
     SubGetMessage(chassis_feed_sub, (void *)&chassis_fetch_data);
+
     CalcOffsetAngle();
-
-#ifndef TESTCODE
-    // 根据遥控器左侧开关,确定当前使用的控制模式为遥控器调试还是键鼠
-    if (switch_is_down(rc_data[TEMP].rc.switch_left)) // 遥控器左侧开关状态为[下],遥控器控制
-        RemoteControlSet();
-    else if (switch_is_up(rc_data[TEMP].rc.switch_left)) // 遥控器左侧开关状态为[上],键盘控制
-        MouseKeySet();
-
-        // EmergencyHandler(); // 处理模块离线和遥控器急停等紧急情况
-
-        // 设置视觉发送数据,还需增加加速度和角速度数据
-        // VisionSetFlag(chassis_fetch_data.enemy_color,,chassis_fetch_data.bullet_speed)
-
-        // 推送消息,双板通信,视觉通信等
-        // 其他应用所需的控制数据在remotecontrolsetmode和mousekeysetmode中完成设置
-#ifdef ONE_BOARD
-    PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
-    PubPushMessage(shoot_cmd_pub, (void *)&shoot_cmd_send);
-    PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
-    VisionSend(&vision_send_data);
-#endif // ONE_BOARD
-#endif
-#ifdef TESTCODE
-
     RemoteControlSet();
     if ((switch_is_mid(rc_data[TEMP].rc.switch_left)) && (switch_is_up(rc_data[TEMP].rc.switch_right))) {
         MouseKeySet();
     }
-#endif
-
+    shoot_cmd_send.bullet_speed=referee_data.ShootData.bullet_speed;
 #ifdef CHASSIS_BOARD
     chassis_send_data_ToUpboard.gimbal_cmd_upload = gimbal_cmd_send;
     chassis_send_data_ToUpboard.shoot_cmd_upload  = shoot_cmd_send;
@@ -411,6 +386,14 @@ void RobotCMDTask()
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
 #endif // DEBUG
+
+
+#ifdef ONE_BOARD
+    PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
+    PubPushMessage(shoot_cmd_pub, (void *)&shoot_cmd_send);
+    PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
+    VisionSend(&vision_send_data);
+#endif // ONE_BOARD
 }
 #if defined(CHASSIS_BOARD) || defined(ONE_BOARD)
 void UItask(void *argument)
