@@ -102,63 +102,12 @@ static void CalcOffsetAngle()
  *
  */
 
-#ifndef TESTCODE
-static void RemoteControlSet()
-{
-    // 控制底盘和云台运行模式,云台待添加,云台是否始终使用IMU数据?
-    if (switch_is_down(rc_data[TEMP].rc.switch_right)) // 右侧开关状态[下],底盘跟随云台
-    {
-        chassis_cmd_send.chassis_mode = CHASSIS_ROTATE;
-        gimbal_cmd_send.gimbal_mode   = GIMBAL_GYRO_MODE;
-    } else if (switch_is_mid(rc_data[TEMP].rc.switch_right)) // 右侧开关状态[中],底盘和云台分离,底盘保持不转动
-    {
-        chassis_cmd_send.chassis_mode = CHASSIS_NO_FOLLOW;
-        gimbal_cmd_send.gimbal_mode   = GIMBAL_FREE_MODE;
-    }
-
-    // 云台参数,确定云台控制数据
-    if (switch_is_mid(rc_data[TEMP].rc.switch_left)) // 左侧开关状态为[中],视觉模式
-    {
-        // 待添加,视觉会发来和目标的误差,同样将其转化为total angle的增量进行控制
-        // ...
-    }
-    // 左侧开关状态为[下],或视觉未识别到目标,纯遥控器拨杆控制
-    if (switch_is_down(rc_data[TEMP].rc.switch_left) /*|| vision_recv_data->target_state == NO_TARGET*/) { // 按照摇杆的输出大小进行角度增量,增益系数需调整
-        gimbal_cmd_send.yaw   = 0.005f * (float)rc_data[TEMP].rc.rocker_l_;
-        gimbal_cmd_send.pitch = 0.0001f * (float)rc_data[TEMP].rc.rocker_l1;
-    }
-    // 云台软件限位
-
-    // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
-    chassis_cmd_send.vx = 10.0f * (float)rc_data[TEMP].rc.rocker_r_; // _水平方向
-    chassis_cmd_send.vy = 10.0f * (float)rc_data[TEMP].rc.rocker_r1; // _竖直方向
-
-    // 发射参数
-    // if (switch_is_up(rc_data[TEMP].rc.switch_right)) // 右侧开关状态[上],弹舱打开
-    //     ;                                            // 弹舱舵机控制,待添加servo_motor模块,开启
-    // else
-    //     ; // 弹舱舵机控制,待添加servo_motor模块,关闭
-
-    // 摩擦轮控制,拨轮向上打为负,向下为正
-    if (rc_data[TEMP].rc.dial < -100) // 向上超过100,打开摩擦轮
-        shoot_cmd_send.friction_mode = FRICTION_ON;
-    else
-        shoot_cmd_send.friction_mode = FRICTION_OFF;
-    // 拨弹控制,遥控器固定为一种拨弹模式,可自行选择
-    if (rc_data[TEMP].rc.dial < -500)
-        shoot_cmd_send.load_mode = LOAD_BURSTFIRE;
-    else
-        shoot_cmd_send.load_mode = LOAD_STOP;
-    // 射频控制,固定每秒1发,后续可以根据左侧拨轮的值大小切换射频,
-    shoot_cmd_send.shoot_rate = 8;
-}
-
-#endif
-
 #ifdef TESTCODE
 static uint8_t UI_flag        = 1;
 static uint8_t One_shoot_flag = 1;
 uint8_t Super_flag            = 0;
+static uint8_t last_count_F;
+static uint8_t last_count_C;
 static void MouseKeySet()
 {
     if ((rc_data[TEMP].rc.switch_left == RC_SW_DOWN) && (rc_data[TEMP].rc.switch_right == RC_SW_DOWN)) {
@@ -219,16 +168,7 @@ static void MouseKeySet()
             }
             break;
     }
-    switch (rc_data[TEMP].key[KEY_PRESS].shift) // 待添加 按shift允许超功率 消耗缓冲能量
-    {
-        case 1:
 
-            break;
-
-        default:
-
-            break;
-    }
     switch (rc_data[TEMP].mouse.press_l) {
         case 1:
             if (shoot_cmd_send.friction_mode == FRICTION_ON) {
@@ -242,6 +182,44 @@ static void MouseKeySet()
             shoot_cmd_send.load_mode = LOAD_MODE;
             break;
     }
+
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q]) {
+        case 1:
+            gimbal_cmd_send.sight_mode = SIGHT_ON;
+            break;
+        case 0:
+            gimbal_cmd_send.sight_mode = SIGHT_OFF;
+            break;
+    }
+
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E]) {
+        case 1:
+            gimbal_cmd_send.image_mode = snipe;
+            break;
+        case 0:
+            gimbal_cmd_send.image_mode = Follow_shoot;
+            break;
+    }
+
+    if (last_count_F != rc_data[TEMP].key_count[KEY_PRESS][Key_F]) // 云台自由模式
+    {
+        if (chassis_cmd_send.chassis_mode == CHASSIS_NO_FOLLOW) {
+            chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
+        } else {
+            chassis_cmd_send.chassis_mode = CHASSIS_NO_FOLLOW;
+        }
+    }
+
+    if (last_count_C != rc_data[TEMP].key_count[KEY_PRESS][Key_C]) // 小陀螺
+    {
+        if (chassis_cmd_send.chassis_mode == CHASSIS_ROTATE) {
+            chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
+        } else {
+            chassis_cmd_send.chassis_mode = CHASSIS_ROTATE;
+        }
+    }
+    last_count_C = rc_data[TEMP].key_count[KEY_PRESS][Key_C];
+    last_count_F = rc_data[TEMP].key_count[KEY_PRESS][Key_F];
 }
 
 static void RemoteControlSet()
@@ -278,11 +256,8 @@ static void RemoteControlSet()
         }
 
         // 发射机构命令
-        static int flag_load         = 0;
-        static int flag_friction     = 0;
-        static int flag_once_or_trig = 0;
-        static int flag_shoot_change = 0;
-
+        static int flag_load     = 0;
+        static int flag_friction = 0;
         switch (rc_data[TEMP].rc.switch_left) {
             case RC_SW_DOWN:
 
@@ -352,11 +327,12 @@ static void RemoteControlSet()
 static referee_info_t referee_data;
 void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 {
-    UI_data.fir_mode  = shoot_cmd_send.friction_mode;
-    UI_data.rot_mode  = chassis_cmd_send.chassis_mode;
-    UI_data.remain_HP = referee_data.GameRobotState.remain_HP;
-    UI_data.load_Mode = One_shoot_flag;
-    UI_data.Max_HP    = referee_data.GameRobotState.max_HP;
+    UI_data.fir_mode     = shoot_cmd_send.friction_mode;
+    UI_data.chassis_mode = chassis_cmd_send.chassis_mode;
+    UI_data.remain_HP    = referee_data.GameRobotState.remain_HP;
+    UI_data.load_Mode    = One_shoot_flag;
+    UI_data.Max_HP       = referee_data.GameRobotState.max_HP;
+    UI_data.Angle        = chassis_cmd_send.offset_angle;
 }
 
 void RobotCMDTask()
@@ -372,21 +348,23 @@ void RobotCMDTask()
     gimbal_fetch_data = data_from_upboard.Gimbal_data;
 #endif // DEBUG
     SubGetMessage(chassis_feed_sub, (void *)&chassis_fetch_data);
-
+    SubGetMessage(Referee_Data_For_UI, &referee_data);
+    
     CalcOffsetAngle();
     RemoteControlSet();
     if ((switch_is_mid(rc_data[TEMP].rc.switch_left)) && (switch_is_up(rc_data[TEMP].rc.switch_right))) {
         MouseKeySet();
     }
-    shoot_cmd_send.bullet_speed=referee_data.ShootData.bullet_speed;
+    shoot_cmd_send.bullet_speed  = referee_data.ShootData.bullet_speed;
+
+    PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
+    Get_UI_Data();
+
 #ifdef CHASSIS_BOARD
     chassis_send_data_ToUpboard.gimbal_cmd_upload = gimbal_cmd_send;
     chassis_send_data_ToUpboard.shoot_cmd_upload  = shoot_cmd_send;
     CANCommSend(chassis_can_comm, (void *)&chassis_send_data_ToUpboard);
-    PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
-    Get_UI_Data();
 #endif // DEBUG
-
 
 #ifdef ONE_BOARD
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
@@ -404,7 +382,7 @@ void UItask(void *argument)
         if (check_to_change_UI(&UI_data) == 1) {
             MyUIRefresh();
         }
-        UIfresh_num();
+        UIfresh_Always();
         osDelay(40);
     }
     /* USER CODE END UItask */

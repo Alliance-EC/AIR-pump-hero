@@ -17,8 +17,8 @@
 #include "stdint.h"
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // 单板控制整车
-      #define CHASSIS_BOARD //底盘板
- //    #define GIMBAL_BOARD  //云台板
+  //    #define CHASSIS_BOARD //底盘板
+     #define GIMBAL_BOARD  //云台板
 #define TESTCODE
 #define VISION_USE_VCP // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
@@ -28,8 +28,8 @@
 #define YAW_CHASSIS_ALIGN_ECD     2060 // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
 #define YAW_ECD_GREATER_THAN_4096 0    // ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度
 #define PITCH_HORIZON_ECD         400 // 云台处于水平位置时编码器值,若对云台有机械改动需要修改
-#define PITCH_MAX_ANGLE           7580   // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
-#define PITCH_MIN_ANGLE           925    // 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
+#define PITCH_MAX_ANGLE           0.76   // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
+#define PITCH_MIN_ANGLE           -0.34    // 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
 //将编码器转换成角度值
 
 #define YAW_ALIGN_ANGLE     (YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI) // 对齐时的角度,0-360
@@ -38,7 +38,7 @@
 #define ONE_BULLET_DELTA_ANGLE 70    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
 #define REDUCTION_RATIO_LOADER 49.0f // 拨盘电机的减速比,英雄需要修改为3508的19.0f
 #define NUM_PER_CIRCLE         10    // 拨盘一圈的装载量
-#define Target_bullet_speed    15.8
+#define Target_bullet_speed    15.8  // 目标弹速
 // 机器人底盘修改的参数,单位为mm(毫米)
 #define WHEEL_BASE             630   // 纵向轴距(前进后退方向)
 #define TRACK_WIDTH            508   // 横向轮距(左右平移方向)
@@ -121,7 +121,13 @@ typedef enum {
     LID_CLOSE,    // 弹舱盖关闭
 } lid_mode_e;
 
+
 typedef enum {
+    SIGHT_OFF = 0, // 弹舱盖打开
+    SIGHT_ON,    // 弹舱盖关闭
+} sight_mode_e;
+
+   typedef enum {
     LOAD_STOP = 0,  // 停止发射
     LOAD_MODE,   // 反转
     LOAD_1_BULLET,  // 单发
@@ -130,6 +136,10 @@ typedef enum {
     FULL_LOAD,
 } loader_mode_e;
 
+typedef enum {
+    Follow_shoot=0,
+    snipe,
+} Servo_Motor_mode_e;
 // 功率限制,从裁判系统获取,是否有必要保留?
 typedef struct
 { // 功率控制
@@ -161,6 +171,9 @@ typedef struct
     float yaw;
     float pitch;
     gimbal_mode_e gimbal_mode;
+    Servo_Motor_mode_e image_mode;
+    sight_mode_e sight_mode;
+
 } Gimbal_Ctrl_Cmd_s;
 
 // cmd发布的发射控制数据,由shoot订阅

@@ -14,7 +14,8 @@ CANCommInstance *upboard_can_comm;
 #endif
 static uint8_t down_flag, up_flag;    // DEBUG
 static ServoInstance *image_module;   // 图传舵机
-static INS_Instance *gimbal_IMU_data; // 云台IMU数据
+static ServoInstance *sight_module;   // 望远镜舵机
+ INS_Instance *gimbal_IMU_data; // 云台IMU数据
 static DJIMotorInstance *yaw_motor, *pitch_motor;
 // 转存遥控器数据，避免在数据传输时使用+=，减轻调试负担
 float yaw_input;
@@ -32,29 +33,29 @@ Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 static void GimbalInputGet()
 {
     yaw_input += gimbal_cmd_recv.yaw / 3.0f;
-    if (pitch_motor->measure.ecd >= PITCH_MIN_ANGLE - 70&&pitch_motor->measure.ecd <= PITCH_MIN_ANGLE + 70)
-        up_flag = 1;
-    else
-        up_flag = 0;
-    if (pitch_motor->measure.ecd <= PITCH_MAX_ANGLE + 70&&pitch_motor->measure.ecd >= PITCH_MAX_ANGLE - 70)
-        down_flag = 1;
-    else
-        down_flag = 0;
-
-    if ((pitch_motor->measure.ecd <= PITCH_MIN_ANGLE - 70||pitch_motor->measure.ecd >= PITCH_MAX_ANGLE + 70 || down_flag) && gimbal_cmd_recv.pitch <= 0) { pitch_input += gimbal_cmd_recv.pitch / 200; }
-    else
-    if ((pitch_motor->measure.ecd <= PITCH_MIN_ANGLE - 70||pitch_motor->measure.ecd >= PITCH_MAX_ANGLE + 70 || up_flag) && gimbal_cmd_recv.pitch >= 0) { pitch_input += gimbal_cmd_recv.pitch / 200; }
+    pitch_input += gimbal_cmd_recv.pitch / 200;
+    if(pitch_input>PITCH_MAX_ANGLE)
+    pitch_input=PITCH_MAX_ANGLE;
+    if(pitch_input<PITCH_MIN_ANGLE)
+    pitch_input=PITCH_MIN_ANGLE;
 }
 // 供robot.c调用的外部接口
 void GimbalInit()
 {
-    Servo_Init_Config_s servo_config = {
+    Servo_Init_Config_s servo_vision_config = {
         .Channel          = TIM_CHANNEL_1,
         .htim             = &htim1,
         .Servo_Angle_Type = Free_Angle_mode,
         .Servo_type       = Servo180,
     };
-    image_module                = ServoInit(&servo_config);
+    Servo_Init_Config_s servo_sight_config = {
+        .Channel          = TIM_CHANNEL_2,
+        .htim             = &htim1,
+        .Servo_Angle_Type = Free_Angle_mode,
+        .Servo_type       = Servo180,
+    };
+    image_module                = ServoInit(&servo_vision_config);
+    sight_module                = ServoInit(&servo_sight_config);
     BMI088_Init_Config_s config = {
         .acc_int_config  = {.GPIOx = GPIOC, .GPIO_Pin = GPIO_PIN_4},
         .gyro_int_config = {.GPIOx = GPIOC, .GPIO_Pin = GPIO_PIN_5},
@@ -106,7 +107,7 @@ void GimbalInit()
             },
             .speed_PID = {
                 .Kp            = 20000, // 50
-                .Ki            = 10,  // 200
+                .Ki            = 10,    // 200
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 4000,
@@ -143,8 +144,8 @@ void GimbalInit()
             },
             .speed_PID = {
                 .Kp            = 20000, // 50
-                .Ki            = 2,   // 350
-                .Kd            = 0,  // 0
+                .Ki            = 2,     // 350
+                .Kd            = 0,     // 0
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 5000,
                 .DeadBand      = 0,
@@ -197,7 +198,27 @@ void GimbalTask()
 
     // @todo:现在已不再需要电机反馈,实际上可以始终使用IMU的姿态数据来作为云台的反馈,yaw电机的offset只是用来跟随底盘
     // 根据控制模式进行电机反馈切换和过渡,视觉模式在robot_cmd模块就已经设置好,gimbal只看yaw_ref和pitch_ref
-    Servo_Motor_FreeAngle_Set(image_module, 34);
+    
+    switch(gimbal_cmd_recv.sight_mode)
+    {
+        case SIGHT_ON:
+            Servo_Motor_FreeAngle_Set(sight_module, 34);
+            break;
+        case SIGHT_OFF:
+            Servo_Motor_FreeAngle_Set(sight_module, 34);
+            break;
+    }
+
+    switch(gimbal_cmd_recv.image_mode)
+    {
+        case Follow_shoot:
+            Servo_Motor_FreeAngle_Set(image_module, 34);
+            break;
+        case snipe:
+            Servo_Motor_FreeAngle_Set(image_module, 41+gimbal_IMU_data->output.INS_angle_deg[1]*0.7);
+            break;
+    }
+
     GimbalInputGet();
     switch (gimbal_cmd_recv.gimbal_mode) {
         // 停止

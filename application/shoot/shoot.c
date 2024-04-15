@@ -130,11 +130,12 @@ void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
         block_flag = 0;
     Last_verb_Of_load = Now_verb_Of_load;
 }
+static float last_bullet_speed;
 void Get_New_friction_speed(int Now_bullet_speed)
 {
     if(Now_bullet_speed>14.5)
     {
-        friction_speed=(Target_bullet_speed-Now_bullet_speed)*100;
+        friction_speed+=(Target_bullet_speed-Now_bullet_speed)*100.0f;
     }
 }
 
@@ -227,10 +228,12 @@ void ShootTask()
     }
 #endif
     // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)
+    if(shoot_cmd_recv.bullet_speed!=last_bullet_speed)
     Get_New_friction_speed(shoot_cmd_recv.bullet_speed);
+    last_bullet_speed=shoot_cmd_recv.bullet_speed;
     if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-        DJIMotorSetRef(friction_l, 35000);
-        DJIMotorSetRef(friction_r, 35000);
+        DJIMotorSetRef(friction_l, friction_speed);
+        DJIMotorSetRef(friction_r, friction_speed);
     } else // 关闭摩擦轮
     {
         DJIMotorSetRef(friction_l, 0);

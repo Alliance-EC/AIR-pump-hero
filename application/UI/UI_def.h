@@ -30,4 +30,9 @@
 #define Graphic_Color_Black 7			//黑色
 #define Graphic_Color_White 8			//白色
 
+//Other
+#define Center_Of_Dirction_X (SCREEN_LENGTH/2+400)
+#define Center_Of_Dirction_Y (SCREEN_WIDTH/2+400)
+#define Len_Dirction (100)
+#define Default_angle 30
 #endif
