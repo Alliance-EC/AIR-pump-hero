@@ -13,6 +13,7 @@ typedef struct
     int pitch_data;
     uint8_t load_Mode;
     float Angle;
+    ext_game_robot_HP_t All_robot_HP;
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;
 extern Graph_Data_t line_fuzhu_two;

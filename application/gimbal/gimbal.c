@@ -12,10 +12,10 @@
 
 CANCommInstance *upboard_can_comm;
 #endif
-static uint8_t down_flag, up_flag;    // DEBUG
-static ServoInstance *image_module;   // 图传舵机
-static ServoInstance *sight_module;   // 望远镜舵机
- INS_Instance *gimbal_IMU_data; // 云台IMU数据
+static uint8_t down_flag, up_flag;  // DEBUG
+static ServoInstance *image_module; // 图传舵机
+static ServoInstance *sight_module; // 望远镜舵机
+INS_Instance *gimbal_IMU_data;      // 云台IMU数据
 static DJIMotorInstance *yaw_motor, *pitch_motor;
 // 转存遥控器数据，避免在数据传输时使用+=，减轻调试负担
 float yaw_input;
@@ -34,10 +34,10 @@ static void GimbalInputGet()
 {
     yaw_input += gimbal_cmd_recv.yaw / 3.0f;
     pitch_input += gimbal_cmd_recv.pitch / 200;
-    if(pitch_input>PITCH_MAX_ANGLE)
-    pitch_input=PITCH_MAX_ANGLE;
-    if(pitch_input<PITCH_MIN_ANGLE)
-    pitch_input=PITCH_MIN_ANGLE;
+    if (pitch_input > PITCH_MAX_ANGLE)
+        pitch_input = PITCH_MAX_ANGLE;
+    if (pitch_input < PITCH_MIN_ANGLE)
+        pitch_input = PITCH_MIN_ANGLE;
 }
 // 供robot.c调用的外部接口
 void GimbalInit()
@@ -52,7 +52,7 @@ void GimbalInit()
         .Channel          = TIM_CHANNEL_2,
         .htim             = &htim1,
         .Servo_Angle_Type = Free_Angle_mode,
-        .Servo_type       = Servo180,
+        .Servo_type       = Servo180    ,
     };
     image_module                = ServoInit(&servo_vision_config);
     sight_module                = ServoInit(&servo_sight_config);
@@ -198,24 +198,22 @@ void GimbalTask()
 
     // @todo:现在已不再需要电机反馈,实际上可以始终使用IMU的姿态数据来作为云台的反馈,yaw电机的offset只是用来跟随底盘
     // 根据控制模式进行电机反馈切换和过渡,视觉模式在robot_cmd模块就已经设置好,gimbal只看yaw_ref和pitch_ref
-    
-    switch(gimbal_cmd_recv.sight_mode)
-    {
+
+    switch (gimbal_cmd_recv.sight_mode) {
         case SIGHT_ON:
-            Servo_Motor_FreeAngle_Set(sight_module, 34);
+            Servo_Motor_FreeAngle_Set(sight_module, 40);
             break;
         case SIGHT_OFF:
-            Servo_Motor_FreeAngle_Set(sight_module, 34);
+            Servo_Motor_FreeAngle_Set(sight_module,180);
             break;
     }
 
-    switch(gimbal_cmd_recv.image_mode)
-    {
+    switch (gimbal_cmd_recv.image_mode) {
         case Follow_shoot:
             Servo_Motor_FreeAngle_Set(image_module, 34);
             break;
         case snipe:
-            Servo_Motor_FreeAngle_Set(image_module, 41+gimbal_IMU_data->output.INS_angle_deg[1]*0.7);
+            Servo_Motor_FreeAngle_Set(image_module, 41 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);
             break;
     }
 
@@ -259,7 +257,7 @@ void GimbalTask()
     // 设置反馈数据,主要是imu和yaw的ecd
     // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
-
+    gimbal_feedback_data.Pitch_data                   = pitch_motor->measure.ecd;
     // 推送消息
 #ifdef ONE_BROAD
     PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);

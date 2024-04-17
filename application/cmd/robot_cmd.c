@@ -106,8 +106,8 @@ static void CalcOffsetAngle()
 static uint8_t UI_flag        = 1;
 static uint8_t One_shoot_flag = 1;
 uint8_t Super_flag            = 0;
-static uint8_t last_count_F;
-static uint8_t last_count_C;
+static uint16_t last_count_F;
+static uint16_t last_count_C;
 static void MouseKeySet()
 {
     if ((rc_data[TEMP].rc.switch_left == RC_SW_DOWN) && (rc_data[TEMP].rc.switch_right == RC_SW_DOWN)) {
@@ -117,8 +117,9 @@ static void MouseKeySet()
         shoot_cmd_send.friction_mode  = FRICTION_OFF;
         shoot_cmd_send.load_mode      = LOAD_STOP;
     }
-    chassis_cmd_send.vy = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000; // 系数待测
-    chassis_cmd_send.vx = rc_data[TEMP].key[KEY_PRESS].a * 80000 - rc_data[TEMP].key[KEY_PRESS].d * 80000;
+    gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
+    chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000; // 系数待测
+    chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 80000 - rc_data[TEMP].key[KEY_PRESS].d * 80000;
 
     gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 1; // 系数待测
     gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 20;
@@ -155,19 +156,6 @@ static void MouseKeySet()
             }
             break;
     }
-    switch (rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_C] % 2) // C键开启陀螺模式
-    {
-        case 1:
-            if (chassis_cmd_send.chassis_mode != CHASSIS_ROTATE) {
-                chassis_cmd_send.chassis_mode = CHASSIS_ROTATE;
-            }
-            break;
-        case 0:
-            if (chassis_cmd_send.chassis_mode == CHASSIS_ROTATE) {
-                chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
-            }
-            break;
-    }
 
     switch (rc_data[TEMP].mouse.press_l) {
         case 1:
@@ -183,7 +171,7 @@ static void MouseKeySet()
             break;
     }
 
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q]) {
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q] % 2) {
         case 1:
             gimbal_cmd_send.sight_mode = SIGHT_ON;
             break;
@@ -192,7 +180,7 @@ static void MouseKeySet()
             break;
     }
 
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E]) {
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E] % 2) {
         case 1:
             gimbal_cmd_send.image_mode = snipe;
             break;
@@ -327,6 +315,8 @@ static void RemoteControlSet()
 static referee_info_t referee_data;
 void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 {
+    UI_data.All_robot_HP = referee_data.GameRobotHP;
+    UI_data.pitch_data   = gimbal_fetch_data.Pitch_data;
     UI_data.fir_mode     = shoot_cmd_send.friction_mode;
     UI_data.chassis_mode = chassis_cmd_send.chassis_mode;
     UI_data.remain_HP    = referee_data.GameRobotState.remain_HP;
@@ -349,13 +339,13 @@ void RobotCMDTask()
 #endif // DEBUG
     SubGetMessage(chassis_feed_sub, (void *)&chassis_fetch_data);
     SubGetMessage(Referee_Data_For_UI, &referee_data);
-    
+
     CalcOffsetAngle();
-    RemoteControlSet();
     if ((switch_is_mid(rc_data[TEMP].rc.switch_left)) && (switch_is_up(rc_data[TEMP].rc.switch_right))) {
         MouseKeySet();
-    }
-    shoot_cmd_send.bullet_speed  = referee_data.ShootData.bullet_speed;
+    } else
+        RemoteControlSet();
+    shoot_cmd_send.bullet_speed = referee_data.ShootData.bullet_speed;
 
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
@@ -383,7 +373,7 @@ void UItask(void *argument)
             MyUIRefresh();
         }
         UIfresh_Always();
-        osDelay(40);
+        osDelay(100);
     }
     /* USER CODE END UItask */
 }
