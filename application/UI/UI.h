@@ -10,10 +10,11 @@ typedef struct
     int Max_HP;
     uint8_t fir_mode;
     chassis_mode_e chassis_mode;
-    int pitch_data;
+    float pitch_data;
     uint8_t load_Mode;
     float Angle;
     ext_game_robot_HP_t All_robot_HP;
+    float CapVot;
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;
 extern Graph_Data_t line_fuzhu_two;

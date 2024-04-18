@@ -257,7 +257,7 @@ void GimbalTask()
     // 设置反馈数据,主要是imu和yaw的ecd
     // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
-    gimbal_feedback_data.Pitch_data                   = pitch_motor->measure.ecd;
+    gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
     // 推送消息
 #ifdef ONE_BROAD
     PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);

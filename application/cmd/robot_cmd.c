@@ -49,6 +49,8 @@ static Shoot_Upload_Data_s shoot_fetch_data; // 从发射获取的反馈信息
 
 static Robot_Status_e robot_state; // 机器人整体工作状态
 static Subscriber_t *Referee_Data_For_UI;
+static Subscriber_t *Cap_data_For_UI;
+static SuperCapInstance Cap;
 void RobotCMDInit()
 {
     rc_data          = RemoteControlInit(&huart3); // 修改为对应串口,注意如果是自研板dbus协议串口需选用添加了反相器的那个 // 遥控器在底盘上 v v c
@@ -59,12 +61,11 @@ void RobotCMDInit()
     shoot_cmd_pub       = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
     shoot_feed_sub      = SubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
     Referee_Data_For_UI = SubRegister("referee_data", sizeof(referee_info_t));
+    Cap_data_For_UI = SubRegister("cap_data",sizeof(SuperCapInstance));
     // #ifdef ONE_BOARD // 双板兼容
     chassis_cmd_pub  = PubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
     // #endif // ONE_BOARD
-    gimbal_cmd_send.pitch = 0;
-
     robot_state = ROBOT_READY; // 启动时机器人进入工作模式,后续加入所有应用初始化完成之后再进入
 }
 
@@ -323,6 +324,7 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
     UI_data.load_Mode    = One_shoot_flag;
     UI_data.Max_HP       = referee_data.GameRobotState.max_HP;
     UI_data.Angle        = chassis_cmd_send.offset_angle;
+    UI_data.CapVot = Cap.cap_msg_s.CapVot;
 }
 
 void RobotCMDTask()
@@ -338,8 +340,8 @@ void RobotCMDTask()
     gimbal_fetch_data = data_from_upboard.Gimbal_data;
 #endif // DEBUG
     SubGetMessage(chassis_feed_sub, (void *)&chassis_fetch_data);
-    SubGetMessage(Referee_Data_For_UI, &referee_data);
-
+    SubGetMessage(Referee_Data_For_UI,(void *) &referee_data);
+    SubGetMessage(Cap_data_For_UI,(void *)&Cap);
     CalcOffsetAngle();
     if ((switch_is_mid(rc_data[TEMP].rc.switch_left)) && (switch_is_up(rc_data[TEMP].rc.switch_right))) {
         MouseKeySet();
@@ -373,7 +375,7 @@ void UItask(void *argument)
             MyUIRefresh();
         }
         UIfresh_Always();
-        osDelay(100);
+        osDelay(10);
     }
     /* USER CODE END UItask */
 }

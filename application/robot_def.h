@@ -17,8 +17,8 @@
 #include "stdint.h"
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // 单板控制整车
-      #define CHASSIS_BOARD //底盘板
-   //  #define GIMBAL_BOARD  //云台板
+   //   #define CHASSIS_BOARD //底盘板
+     #define GIMBAL_BOARD  //云台板
 #define TESTCODE
 #define VISION_USE_VCP // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
@@ -214,7 +214,7 @@ typedef struct
 typedef struct
 {
     uint16_t Pitch_data;
-    uint16_t yaw_motor_single_round_angle;
+    float yaw_motor_single_round_angle;
 } Gimbal_Upload_Data_s;
 
 typedef struct

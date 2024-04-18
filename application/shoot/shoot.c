@@ -135,7 +135,7 @@ void Get_New_friction_speed(int Now_bullet_speed)
 {
     if(Now_bullet_speed>14.5)
     {
-        friction_speed+=(Target_bullet_speed-Now_bullet_speed)*100.0f;
+        friction_speed+=(Target_bullet_speed-Now_bullet_speed)*100.0f  ;
     }
 }
 
