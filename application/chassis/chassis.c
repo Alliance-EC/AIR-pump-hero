@@ -71,7 +71,7 @@ void ChassisInit()
                 .Kd            = 0,  // 0
                 .IntegralLimit = 3000,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .MaxOut        = 12000,
+                .MaxOut        = 15000,
                 0},
             .current_PID = {
                 .Kp            = 0.5, // 0.4
@@ -163,6 +163,7 @@ static float Power_Max = 60.0f;
 
 float lf_power, lb_power, rf_power, rb_power;
 float vt_lf_Now, vt_rf_Now, vt_lb_Now, vt_rb_Now;
+
 static void LimitChassisOutput()
 {
     // 功率限制待添加
@@ -190,16 +191,25 @@ static void LimitChassisOutput()
 
     PowerControlInit(referee_data->GameRobotState.chassis_power_limit, 1);
 
-    lf_power = PowerInputCalc(motor_lf->measure.speed_aps, motor_lf->measure.real_current); 
-    lb_power = PowerInputCalc(motor_lb->measure.speed_aps, motor_lb->measure.real_current); 
-    rf_power = PowerInputCalc(motor_rf->measure.speed_aps, motor_rf->measure.real_current); 
-    rb_power = PowerInputCalc(motor_rb->measure.speed_aps, motor_rb->measure.real_current); 
+    lf_power = PowerInputCalc(motor_lf->measure.speed_aps, vt_lf); 
+    lb_power = PowerInputCalc(motor_lb->measure.speed_aps, vt_lb); 
+    rf_power = PowerInputCalc(motor_rf->measure.speed_aps, vt_rf); 
+    rb_power = PowerInputCalc(motor_rb->measure.speed_aps, vt_rb); 
     
-    vt_lf_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_lf->measure.speed_aps, motor_lf->measure.real_current, 0, vt_lf);
-    vt_lb_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_lb->measure.speed_aps, motor_lb->measure.real_current, 1, vt_lb);
-    vt_rf_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_rf->measure.speed_aps, motor_rf->measure.real_current, 2, vt_rf);
-    vt_rb_Now = PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_rb->measure.speed_aps, motor_rb->measure.real_current, 3, vt_rb);
+    TotalPowerCalc(lf_power, lb_power, rf_power, rb_power);
 
+    vt_lf_Now = PowerCalc(lf_power, motor_lf->measure.speed_aps, vt_lf);
+    vt_lb_Now = PowerCalc(lb_power, motor_lb->measure.speed_aps, vt_lb);
+    vt_rf_Now = PowerCalc(rf_power, motor_rf->measure.speed_aps, vt_rf);
+    vt_rb_Now = PowerCalc(rb_power, motor_rb->measure.speed_aps, vt_rb);
+    // PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_lf->measure.speed_aps, motor_lf->measure.real_current, 0, vt_lf);
+    // vt_lf_Now = current_output;
+    // PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_lb->measure.speed_aps, motor_lb->measure.real_current, 1, vt_lb);
+    // vt_lb_Now = current_output;
+    // PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_rf->measure.speed_aps, motor_rf->measure.real_current, 2, vt_rf);
+    // vt_rf_Now = current_output;
+    // PowerControlCalc(lf_power, lb_power, rf_power, rb_power, motor_rb->measure.speed_aps, motor_rb->measure.real_current, 3, vt_rb);
+    // vt_rb_Now = current_output;
     // 完成功率限制后进行电机参考输入设定
 
     // if (referee_data->PowerHeatData.chassis_power_buffer > Power_Max) {
@@ -212,10 +222,10 @@ static void LimitChassisOutput()
     //     DJIMotorSetRef(motor_lb, vt_lb * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
     //     DJIMotorSetRef(motor_rb, vt_rb * (referee_data->PowerHeatData.chassis_power_buffer / Power_Max));
     // }
-         DJIMotorSetRef(motor_lf, vt_lf);
-         DJIMotorSetRef(motor_rf, vt_rf);
-         DJIMotorSetRef(motor_lb, vt_lb);
-         DJIMotorSetRef(motor_rb, vt_rb);
+    DJIMotorSetRef(motor_lf, vt_lf_Now);
+    DJIMotorSetRef(motor_rf, vt_rf_Now);
+    DJIMotorSetRef(motor_lb, vt_lb_Now);
+    DJIMotorSetRef(motor_rb, vt_rb_Now);
 }
 
 /**
