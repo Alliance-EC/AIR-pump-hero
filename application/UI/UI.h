@@ -9,10 +9,13 @@ typedef struct
     int remain_HP;
     int Max_HP;
     uint8_t shoot_mode;
-    uint8_t rot_mode;
-    int pitch_data;
+    chassis_mode_e chassis_mode;
+    float pitch_data;
     uint8_t load_Mode;
     float Angle;
+    Shoot_Step Bullet_ready;
+    ext_game_robot_HP_t All_robot_HP;
+    float CapVot;
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;
 extern Graph_Data_t line_fuzhu_two;

@@ -74,10 +74,14 @@ void One_Shoot_Task()
 {
     if (NOW_MODE.now_step == LOAD) {
         // 拨弹盘电机控制
+        DJIMotorOuterLoop(loader, SPEED_LOOP);
+        DJIMotorSetRef(loader, 12000);
         if (photogate_state == 1) {
             tick_num = 0;
         }
         if (photogate_state == 0) {
+            DJIMotorOuterLoop(loader, SPEED_LOOP);
+            DJIMotorSetRef(loader, 0);
             tick_num++;
             if (tick_num == 100) { NOW_MODE.now_step = PUSH; }
         }
@@ -85,12 +89,13 @@ void One_Shoot_Task()
     if (NOW_MODE.now_step == PUSH) {
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
         NOW_MODE.now_step = FIRE;
+        osDelay(300);
     }
     if (NOW_MODE.now_step == FIRE && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON && One_Shoot_flag) {
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
-        DWT_Delay(0.6);
+        osDelay(600);
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-        DWT_Delay(0.2  );
+        osDelay(200);
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
         NOW_MODE.now_step = LOAD;
         One_Shoot_flag    = 0;
@@ -109,21 +114,16 @@ void ShootTask()
 #ifdef GIMBAL_BROAD
 // 在robot.c可以获得值
 #endif // DEBUG
+    if (Last_Air_Mode != shoot_cmd_recv.air_pump_mode && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON) { One_Shoot_flag = 1; }
+    Last_Air_Mode   = shoot_cmd_recv.air_pump_mode;
     photogate_state = HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_6);
-    if (Last_Load_mode != shoot_cmd_recv.load_mode && shoot_cmd_recv.load_mode == LOAD_ON) {
-        NOW_MODE.now_step = LOAD;
-    }
-    Last_Load_mode = shoot_cmd_recv.load_mode;
-    if (Last_Air_Mode != shoot_cmd_recv.air_pump_mode && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON) {
-        One_Shoot_flag = 1;
-    }
-    Last_Air_Mode = shoot_cmd_recv.air_pump_mode;
     if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
     } else {
         One_Shoot_Task();
     }
+    shoot_feedback_data.bullet_ready = NOW_MODE.now_step;
 #ifdef ONE_BOARD
     PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
 #endif // DEBUG

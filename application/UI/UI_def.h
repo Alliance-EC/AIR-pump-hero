@@ -31,8 +31,13 @@
 #define Graphic_Color_White 8			//白色
 
 //Other
-#define Center_Of_Dirction_X (SCREEN_LENGTH/2+400)
-#define Center_Of_Dirction_Y (SCREEN_WIDTH/2+400)
-#define Len_Dirction (100)
-#define Default_angle 30
+#define Center_Of_Dirction_X (1300)
+#define Center_Of_Dirction_Y (200)
+#define Len_Dirction (40)
+
+#define Pitch_angle_X 1300
+#define Pitch_angle_Y 400
+#define Radius_Pitch 80
+
+
 #endif

@@ -40,9 +40,9 @@ void RobotInit()
     __disable_irq();
 
     BSPInit();
-    RobotCMDInit();
    // buzzer_one_note(Do_freq, 0.1f);
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
+    RobotCMDInit();
    // buzzer_one_note(Re_freq, 0.1f);
     ChassisInit();
    // buzzer_one_note(So_freq, 0.1f);

@@ -12,9 +12,10 @@
 
 CANCommInstance *upboard_can_comm;
 #endif
-static uint8_t down_flag, up_flag;    // DEBUG
-static ServoInstance *image_module;   // 图传舵机
-static INS_Instance *gimbal_IMU_data; // 云台IMU数据
+static uint8_t down_flag, up_flag;  // DEBUG
+static ServoInstance *image_module; // 图传舵机
+static ServoInstance *sight_module; // 望远镜舵机
+INS_Instance *gimbal_IMU_data;      // 云台IMU数据
 static DJIMotorInstance *yaw_motor, *pitch_motor;
 // 转存遥控器数据，避免在数据传输时使用+=，减轻调试负担
 float yaw_input;
@@ -32,29 +33,29 @@ Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 static void GimbalInputGet()
 {
     yaw_input += gimbal_cmd_recv.yaw / 3.0f;
-    if (pitch_motor->measure.ecd >= PITCH_MIN_ANGLE - 70&&pitch_motor->measure.ecd <= PITCH_MIN_ANGLE + 70)
-        up_flag = 1;
-    else
-        up_flag = 0;
-    if (pitch_motor->measure.ecd <= PITCH_MAX_ANGLE + 70&&pitch_motor->measure.ecd >= PITCH_MAX_ANGLE - 70)
-        down_flag = 1;
-    else
-        down_flag = 0;
-
-    if ((pitch_motor->measure.ecd <= PITCH_MIN_ANGLE - 70||pitch_motor->measure.ecd >= PITCH_MAX_ANGLE + 70 || down_flag) && gimbal_cmd_recv.pitch <= 0) { pitch_input += gimbal_cmd_recv.pitch / 200; }
-    else
-    if ((pitch_motor->measure.ecd <= PITCH_MIN_ANGLE - 70||pitch_motor->measure.ecd >= PITCH_MAX_ANGLE + 70 || up_flag) && gimbal_cmd_recv.pitch >= 0) { pitch_input += gimbal_cmd_recv.pitch / 200; }
+    pitch_input += gimbal_cmd_recv.pitch / 200;
+    if (pitch_input > PITCH_MAX_ANGLE)
+        pitch_input = PITCH_MAX_ANGLE;
+    if (pitch_input < PITCH_MIN_ANGLE)
+        pitch_input = PITCH_MIN_ANGLE;
 }
 // 供robot.c调用的外部接口
 void GimbalInit()
 {
-    Servo_Init_Config_s servo_config = {
+    Servo_Init_Config_s servo_vision_config = {
         .Channel          = TIM_CHANNEL_1,
         .htim             = &htim1,
         .Servo_Angle_Type = Free_Angle_mode,
         .Servo_type       = Servo180,
     };
-    image_module                = ServoInit(&servo_config);
+    Servo_Init_Config_s servo_sight_config = {
+        .Channel          = TIM_CHANNEL_2,
+        .htim             = &htim1,
+        .Servo_Angle_Type = Free_Angle_mode,
+        .Servo_type       = Servo180    ,
+    };
+    image_module                = ServoInit(&servo_vision_config);
+    sight_module                = ServoInit(&servo_sight_config);
     BMI088_Init_Config_s config = {
         .acc_int_config  = {.GPIOx = GPIOC, .GPIO_Pin = GPIO_PIN_4},
         .gyro_int_config = {.GPIOx = GPIOC, .GPIO_Pin = GPIO_PIN_5},
@@ -95,9 +96,9 @@ void GimbalInit()
         },
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp            = 8, // 8
+                .Kp            = 11, // 8
                 .Ki            = 0.1,
-                .Kd            = 0,
+                .Kd            = 0 ,
                 .DeadBand      = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 6,
@@ -105,7 +106,7 @@ void GimbalInit()
                 .MaxOut = 500,
             },
             .speed_PID = {
-                .Kp            = 20000, // 50
+                .Kp            = 40000, // 50
                 .Ki            = 10,  // 200
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
@@ -138,11 +139,11 @@ void GimbalInit()
                 .Ki            = 0.01,
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 10,
+                .IntegralLimit = 1+0,
                 .MaxOut        = 500,
             },
             .speed_PID = {
-                .Kp            = 20000, // 50
+                .Kp            = 10000, // 50
                 .Ki            = 2,   // 350
                 .Kd            = 0,  // 0
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
@@ -150,16 +151,16 @@ void GimbalInit()
                 .DeadBand      = 0,
                 .MaxOut        = 25000,
             },
-            .other_angle_feedback_ptr = &gimbal_IMU_data->output.INS_angle[1],
+            .other_angle_feedback_ptr = &gimbal_IMU_data->output.INS_angle[INS_PITCH_ADDRESS_OFFSET],
             // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
-            .other_speed_feedback_ptr = (&gimbal_IMU_data->INS_data.INS_gyro[INS_PITCH_ADDRESS_OFFSET]),
+            .other_speed_feedback_ptr = (&gimbal_IMU_data->INS_data.INS_gyro[1]),
         },
         .controller_setting_init_config = {
             .angle_feedback_source = OTHER_FEED,
             .speed_feedback_source = OTHER_FEED,
             .outer_loop_type       = ANGLE_LOOP,
             .close_loop_type       = SPEED_LOOP | ANGLE_LOOP,
-            .motor_reverse_flag    = MOTOR_DIRECTION_REVERSE,
+            .feedback_reverse_flag    = FEEDBACK_DIRECTION_REVERSE,
         },
         .motor_type = GM6020,
     };
@@ -197,7 +198,25 @@ void GimbalTask()
 
     // @todo:现在已不再需要电机反馈,实际上可以始终使用IMU的姿态数据来作为云台的反馈,yaw电机的offset只是用来跟随底盘
     // 根据控制模式进行电机反馈切换和过渡,视觉模式在robot_cmd模块就已经设置好,gimbal只看yaw_ref和pitch_ref
-    Servo_Motor_FreeAngle_Set(image_module, 34);
+
+    switch (gimbal_cmd_recv.sight_mode) {
+        case SIGHT_ON:
+            Servo_Motor_FreeAngle_Set(sight_module, 50);
+            break;
+        case SIGHT_OFF:
+            Servo_Motor_FreeAngle_Set(sight_module,180);
+            break;
+    }
+
+    switch (gimbal_cmd_recv.image_mode) {
+        case Follow_shoot:
+            Servo_Motor_FreeAngle_Set(image_module, 88);
+            break;
+        case snipe:
+            Servo_Motor_FreeAngle_Set(image_module, 88 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);
+            break;
+    }
+
     GimbalInputGet();
     switch (gimbal_cmd_recv.gimbal_mode) {
         // 停止
@@ -238,7 +257,7 @@ void GimbalTask()
     // 设置反馈数据,主要是imu和yaw的ecd
     // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
-
+    gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
     // 推送消息
 #ifdef ONE_BOARD
     PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
