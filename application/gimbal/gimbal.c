@@ -12,10 +12,13 @@
 
 CANCommInstance *upboard_can_comm;
 #endif
-static uint8_t down_flag, up_flag;  // DEBUG
-static ServoInstance *image_module; // 图传舵机
-static ServoInstance *sight_module; // 望远镜舵机
-INS_Instance *gimbal_IMU_data;      // 云台IMU数据
+static HostInstance *host_instance; // 上位机接口
+// 这里的四元数以wxyz的顺序
+static uint8_t vision_recv_data[10]; // 从视觉上位机接收的数据-绝对角度，第9个字节作为识别到目标的标志位
+static uint8_t vision_send_data[21]; // 给视觉上位机发送的数据-四元数
+static ServoInstance *image_module;  // 图传舵机
+static ServoInstance *sight_module;  // 望远镜舵机
+INS_Instance *gimbal_IMU_data;       // 云台IMU数据
 static DJIMotorInstance *yaw_motor, *pitch_motor;
 // 转存遥控器数据，避免在数据传输时使用+=，减轻调试负担
 float yaw_input;
@@ -28,20 +31,41 @@ static Subscriber_t *gimbal_sub; // cmd控制消息订阅者
 
 Gimbal_Upload_Data_s gimbal_feedback_data; // 回传给cmd的云台状态信息
 Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
-
+float vision_yaw, vision_pitch, vision_flag;
 // 仅供云台内部函数使用
 static void GimbalInputGet()
 {
-    yaw_input += gimbal_cmd_recv.yaw / 3.0f;
-    pitch_input += gimbal_cmd_recv.pitch / 200;
+    memcpy(&vision_yaw, vision_recv_data, sizeof(float));
+    memcpy(&vision_pitch, vision_recv_data + 4, sizeof(float));
+    // 接受发射指令
+    memccpy(&vision_flag, vision_recv_data + 8, sizeof(uint8_t), 1);
+    if (vision_flag == 0 || gimbal_cmd_recv.vision_mode == VISION_OFF) {
+        yaw_input += gimbal_cmd_recv.yaw / 3.0f;
+        pitch_input += gimbal_cmd_recv.pitch / 200;
+    } else {
+        yaw_input   = vision_yaw + gimbal_IMU_data->INS_data.INS_gyro[INS_YAW_ADDRESS_OFFSET];
+        pitch_input = vision_pitch + gimbal_IMU_data->output.INS_angle[INS_PITCH_ADDRESS_OFFSET];
+    }
     if (pitch_input > PITCH_MAX_ANGLE)
         pitch_input = PITCH_MAX_ANGLE;
     if (pitch_input < PITCH_MIN_ANGLE)
         pitch_input = PITCH_MIN_ANGLE;
 }
+
+void HOST_RECV_CALLBACK()
+{
+    memcpy(vision_recv_data, host_instance->comm_instance, host_instance->RECV_SIZE);
+    vision_recv_data[8] = 1;
+}
 // 供robot.c调用的外部接口
 void GimbalInit()
 {
+    HostInstanceConf host_conf = {
+        .callback  = HOST_RECV_CALLBACK,
+        .comm_mode = HOST_VCP,
+        .RECV_SIZE = 8,
+    };
+    host_instance                           = HostInit(&host_conf); // 视觉通信串口
     Servo_Init_Config_s servo_vision_config = {
         .Channel          = TIM_CHANNEL_1,
         .htim             = &htim1,
@@ -52,7 +76,7 @@ void GimbalInit()
         .Channel          = TIM_CHANNEL_2,
         .htim             = &htim1,
         .Servo_Angle_Type = Free_Angle_mode,
-        .Servo_type       = Servo180    ,
+        .Servo_type       = Servo180,
     };
     image_module                = ServoInit(&servo_vision_config);
     sight_module                = ServoInit(&servo_sight_config);
@@ -98,7 +122,7 @@ void GimbalInit()
             .angle_PID = {
                 .Kp            = 11, // 8
                 .Ki            = 0.1,
-                .Kd            = 0 ,
+                .Kd            = 0,
                 .DeadBand      = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 6,
@@ -107,7 +131,7 @@ void GimbalInit()
             },
             .speed_PID = {
                 .Kp            = 40000, // 50
-                .Ki            = 10,  // 200
+                .Ki            = 10,    // 200
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 4000,
@@ -139,13 +163,13 @@ void GimbalInit()
                 .Ki            = 0.01,
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 1+0,
+                .IntegralLimit = 1 + 0,
                 .MaxOut        = 500,
             },
             .speed_PID = {
                 .Kp            = 10000, // 50
-                .Ki            = 2,   // 350
-                .Kd            = 0,  // 0
+                .Ki            = 2,     // 350
+                .Kd            = 0,     // 0
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 5000,
                 .DeadBand      = 0,
@@ -160,7 +184,7 @@ void GimbalInit()
             .speed_feedback_source = OTHER_FEED,
             .outer_loop_type       = ANGLE_LOOP,
             .close_loop_type       = SPEED_LOOP | ANGLE_LOOP,
-            .feedback_reverse_flag    = FEEDBACK_DIRECTION_REVERSE,
+            .feedback_reverse_flag = FEEDBACK_DIRECTION_REVERSE,
         },
         .motor_type = GM6020,
     };
@@ -204,7 +228,7 @@ void GimbalTask()
             Servo_Motor_FreeAngle_Set(sight_module, 50);
             break;
         case SIGHT_OFF:
-            Servo_Motor_FreeAngle_Set(sight_module,180);
+            Servo_Motor_FreeAngle_Set(sight_module, 180);
             break;
     }
 
@@ -217,7 +241,6 @@ void GimbalTask()
             break;
     }
 
-    GimbalInputGet();
     switch (gimbal_cmd_recv.gimbal_mode) {
         // 停止
         case GIMBAL_ZERO_FORCE:
@@ -226,6 +249,7 @@ void GimbalTask()
             break;
         // 使用陀螺仪的反馈,底盘根据yaw电机的offset跟随云台或视觉模式采用
         case GIMBAL_GYRO_MODE: // 后续只保留此模式
+            GimbalInputGet();
             DJIMotorEnable(yaw_motor);
             DJIMotorEnable(pitch_motor);
             DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
@@ -237,6 +261,7 @@ void GimbalTask()
             break;
         // 云台自由模式,使用编码器反馈,底盘和云台分离,仅云台旋转,一般用于调整云台姿态(英雄吊射等)/能量机关
         case GIMBAL_FREE_MODE: // 后续删除,或加入云台追地盘的跟随模式(响应速度更快)
+            GimbalInputGet();
             DJIMotorEnable(yaw_motor);
             DJIMotorEnable(pitch_motor);
             DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
@@ -256,6 +281,15 @@ void GimbalTask()
 
     // 设置反馈数据,主要是imu和yaw的ecd
     // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
+    static uint8_t frame_head[] = {0xAF, 0x32, 0x00, 0x10};
+    memcpy(vision_send_data, frame_head, 4);
+
+    memcpy(vision_send_data + 4, gimbal_IMU_data->INS_data.INS_quat, sizeof(float) * 4);
+    vision_send_data[20] = 0;
+    for (size_t i = 0; i < 20; i++)
+        vision_send_data[20] += vision_send_data[i];
+    HostSend(host_instance, vision_send_data, 21);
+
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
     gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
     // 推送消息

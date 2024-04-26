@@ -129,8 +129,11 @@ typedef enum {
 typedef enum {
     Follow_shoot=0,
     snipe,
-} Servo_Motor_mode_e;
-// 功率限制,从裁判系统获取,是否有必要保留?
+} Servo_Motor_mode_e;//图传舵机状态
+typedef enum {
+    VISION_OFF,
+    VISION_ON,
+} Vision_Shoot_mode_e;
 typedef struct
 { // 功率控制
     float chassis_power_mx;
@@ -163,7 +166,7 @@ typedef struct
     gimbal_mode_e gimbal_mode;
     Servo_Motor_mode_e image_mode;
     sight_mode_e sight_mode;
-
+    Vision_Shoot_mode_e vision_mode;
 } Gimbal_Ctrl_Cmd_s;
 typedef enum { // 排气阀开关
     AIR_PUMP_OFF = 0,

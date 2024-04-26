@@ -29,10 +29,10 @@ void ShootInit()
         .controller_param_init_config = {
             .angle_PID = {
                 // 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降
-                .Kp     = 20, // 10
-                .Ki     = 0,
+                .Kp     = 40, // 10
+                .Ki     = 0.1,
                 .Kd     = 0,
-                .MaxOut = 2000,
+                .MaxOut = 10000,
             },
             .speed_PID = {
                 .Kp            = 4,
@@ -68,40 +68,60 @@ static int8_t photogate_state;
 /* 机器人发射机构控制核心任务 */
 One_shoot_control NOW_MODE = {LOAD, 1};
 
-static int8_t tick_num = 0;
-static int8_t One_Shoot_flag, Last_Air_Mode, Last_Load_mode;
+static int16_t tick_num1 = 0, tick_num2 = 0;
+static int8_t One_Shoot_flag, Last_Air_Mode;
+static int8_t Loader_flag = 1;
 void One_Shoot_Task()
 {
     if (NOW_MODE.now_step == LOAD) {
         // 拨弹盘电机控制
-        DJIMotorOuterLoop(loader, SPEED_LOOP);
-        DJIMotorSetRef(loader, 12000);
+        if (Loader_flag) {
+            // DJIMotorOuterLoop(loader, ANGLE_LOOP);
+            // DJIMotorSetRef(loader, loader->measure.total_angle - ONE_BULLET_DELTA_ANGLE );
+            DJIMotorEnable(loader);
+            DJIMotorOuterLoop(loader, SPEED_LOOP);
+            DJIMotorSetRef(loader, 5000);
+            Loader_flag = 0;
+        }
         if (photogate_state == 1) {
-            tick_num = 0;
+            tick_num1 = 0;
+            tick_num2++;
+        }
+        if (tick_num2 >= 100) {
+            tick_num2   = 0;
+            Loader_flag = 1;
         }
         if (photogate_state == 0) {
-            DJIMotorOuterLoop(loader, SPEED_LOOP);
-            DJIMotorSetRef(loader, 0);
-            tick_num++;
-            if (tick_num == 100) { NOW_MODE.now_step = PUSH; }
+            tick_num2 = 0;
+
+            DJIMotorStop(loader);
+            tick_num1++;
+            if (tick_num1 >= 25) { NOW_MODE.now_step = PUSH; }
         }
     }
     if (NOW_MODE.now_step == PUSH) {
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
         NOW_MODE.now_step = FIRE;
-        osDelay(300);
+        osDelay(100);
     }
     if (NOW_MODE.now_step == FIRE && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON && One_Shoot_flag) {
+        if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_14) == GPIO_PIN_RESET) {
+            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
+            NOW_MODE.now_step = FIRE;
+            osDelay(100);
+        }
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
-        osDelay(600);
+        osDelay(100);
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-        osDelay(200);
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+        osDelay(600);
         NOW_MODE.now_step = LOAD;
         One_Shoot_flag    = 0;
+        Loader_flag       = 1;
     }
 }
 
+int a;
 void ShootTask()
 {
     // PE14 连推弹锤
@@ -118,6 +138,7 @@ void ShootTask()
     Last_Air_Mode   = shoot_cmd_recv.air_pump_mode;
     photogate_state = HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_6);
     if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
+        DJIMotorStop(loader);
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
     } else {
