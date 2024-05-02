@@ -108,7 +108,7 @@ void One_Shoot_Task()
         if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_14) == GPIO_PIN_RESET) {
             HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
             NOW_MODE.now_step = FIRE;
-            osDelay(100);
+            osDelay(700);
         }
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
         osDelay(100);
@@ -120,8 +120,17 @@ void One_Shoot_Task()
         Loader_flag       = 1;
     }
 }
-
-int a;
+static uint8_t block_flag = 0;
+static float Last_verb_Of_load;
+void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
+{
+    if (
+        fabs(Now_verb_Of_load) <= (loader)->motor_controller.pid_ref / 400 && fabs(Last_verb_Of_load) <= (loader)->motor_controller.pid_ref / 400 && (loader)->motor_controller.pid_ref != 0) {
+        block_flag = 1;
+    } else
+        block_flag = 0;
+    Last_verb_Of_load = Now_verb_Of_load;
+}
 void ShootTask()
 {
     // PE14 连推弹锤
@@ -134,6 +143,13 @@ void ShootTask()
 #ifdef GIMBAL_BROAD
 // 在robot.c可以获得值
 #endif // DEBUG
+   // block_shook_check((loader)->measure.speed_aps);
+    if (block_flag == 1) {
+        DJIMotorOuterLoop(loader, ANGLE_LOOP);
+        DJIMotorSetRef(loader, loader->measure.total_angle + ONE_BULLET_DELTA_ANGLE     );
+        DWT_Delay(0.1);
+        block_flag = 0;
+    }
     if (Last_Air_Mode != shoot_cmd_recv.air_pump_mode && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON) { One_Shoot_flag = 1; }
     Last_Air_Mode   = shoot_cmd_recv.air_pump_mode;
     photogate_state = HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_6);

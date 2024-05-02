@@ -7,6 +7,8 @@
 #include "message_center.h"
 #include "general_def.h"
 #include "can_comm.h"
+#include "vision.h"
+#include "usart.h"
 #include "bmi088.h"
 #ifdef GIMBAL_BOARD
 
@@ -35,6 +37,7 @@ float vision_yaw, vision_pitch, vision_flag;
 // 仅供云台内部函数使用
 static void GimbalInputGet()
 {
+    MX_USB_DEVICE_Init();
     memcpy(&vision_yaw, vision_recv_data, sizeof(float));
     memcpy(&vision_pitch, vision_recv_data + 4, sizeof(float));
     // 接受发射指令
@@ -58,6 +61,7 @@ void HOST_RECV_CALLBACK()
     vision_recv_data[8] = 1;
 }
 // 供robot.c调用的外部接口
+
 void GimbalInit()
 {
     HostInstanceConf host_conf = {
@@ -65,7 +69,7 @@ void GimbalInit()
         .comm_mode = HOST_VCP,
         .RECV_SIZE = 8,
     };
-    host_instance                           = HostInit(&host_conf); // 视觉通信串口
+    host_instance = HostInit(&host_conf); // 视觉通信串口
     Servo_Init_Config_s servo_vision_config = {
         .Channel          = TIM_CHANNEL_1,
         .htim             = &htim1,
@@ -121,8 +125,8 @@ void GimbalInit()
         .controller_param_init_config = {
             .angle_PID = {
                 .Kp            = 11, // 8
-                .Ki            = 0.1,
-                .Kd            = 0,
+                .Ki            = 0,
+                .Kd            = 0.01,
                 .DeadBand      = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 6,
@@ -208,6 +212,7 @@ void GimbalInit()
     gimbal_sub = SubRegister("gimbal_cmd", sizeof(Gimbal_Ctrl_Cmd_s));
 #endif // DEBUG
 }
+
 /* 机器人云台控制核心任务,后续考虑只保留IMU控制,不再需要电机的反馈 */
 void GimbalTask()
 {
@@ -225,19 +230,19 @@ void GimbalTask()
 
     switch (gimbal_cmd_recv.sight_mode) {
         case SIGHT_ON:
-            Servo_Motor_FreeAngle_Set(sight_module, 50);
+            Servo_Motor_FreeAngle_Set(sight_module, 173);
             break;
         case SIGHT_OFF:
-            Servo_Motor_FreeAngle_Set(sight_module, 180);
+            Servo_Motor_FreeAngle_Set(sight_module, 80);
             break;
     }
 
     switch (gimbal_cmd_recv.image_mode) {
-        case Follow_shoot:
-            Servo_Motor_FreeAngle_Set(image_module, 88);
+         case Follow_shoot:
+            Servo_Motor_FreeAngle_Set(image_module, 80);
             break;
         case snipe:
-            Servo_Motor_FreeAngle_Set(image_module, 88 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);
+            Servo_Motor_FreeAngle_Set(image_module, 88 - gimbal_IMU_data->output.INS_angle_deg[0] * 0.8);
             break;
     }
 
@@ -281,17 +286,10 @@ void GimbalTask()
 
     // 设置反馈数据,主要是imu和yaw的ecd
     // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
-    static uint8_t frame_head[] = {0xAF, 0x32, 0x00, 0x10};
-    memcpy(vision_send_data, frame_head, 4);
-
-    memcpy(vision_send_data + 4, gimbal_IMU_data->INS_data.INS_quat, sizeof(float) * 4);
-    vision_send_data[20] = 0;
-    for (size_t i = 0; i < 20; i++)
-        vision_send_data[20] += vision_send_data[i];
-    HostSend(host_instance, vision_send_data, 21);
+    
 
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
-    gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
+    gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[0];
     // 推送消息
 #ifdef ONE_BOARD
     PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
@@ -300,3 +298,23 @@ void GimbalTask()
 
 #endif // DEBUG
 }
+
+#if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
+// void UItask(void *argument)
+// {
+//   /* USER CODE BEGIN Startvisiontask */
+//   /* Infinite loop */
+//   for(;;)
+//   {
+//     static uint8_t frame_head[] = {0xAF, 0x32, 0x00, 0x10};
+//     memcpy(vision_send_data, frame_head, 4);
+//     memcpy(vision_send_data + 4, gimbal_IMU_data->INS_data.INS_quat, sizeof(float) * 4);
+//     vision_send_data[20] = 0;
+//     for (size_t i = 0; i < 20; i++)
+//      vision_send_data[20] += vision_send_data[i];
+//     HostSend(host_instance, vision_send_data, 21);
+//     osDelay(1);
+//   }
+//   /* USER CODE END Startvisiontask */
+// }
+#endif // DEBUG

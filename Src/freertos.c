@@ -72,8 +72,8 @@ const osThreadAttr_t Buzzer_attributes = {
 osThreadId_t robotaskHandle;
 const osThreadAttr_t robotask_attributes = {
   .name = "robotask",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .stack_size = 2048 * 4,
+  .priority = (osPriority_t) osPriorityHigh7,
 };
 /* Definitions for LEDtask */
 osThreadId_t LEDtaskHandle;
@@ -294,7 +294,7 @@ __weak void StartINSTASK(void *argument)
 __weak void UItask(void *argument)
 {
   /* USER CODE BEGIN UItask */
-  /* Infinite loop */
+  /* Infinite loop */     
   for(;;)
   {
     osDelay(1);

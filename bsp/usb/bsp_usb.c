@@ -30,10 +30,10 @@ uint8_t *USBInit(USB_Init_Config_s usb_conf)
     reg_flag = 1;
     return bsp_usb_rx_buffer;
 }
-
+int a=0;
 void USBTransmit(uint8_t *buffer, uint16_t len)
 {
-    CDC_Transmit_FS(buffer, len); // 发送
+    a=CDC_Transmit_FS(buffer, len); // 发送
 }
 
 void USBRefresh()

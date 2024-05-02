@@ -318,7 +318,7 @@ void ChassisTask()
             chassis_cmd_recv.wz = 0;
             break;
         case CHASSIS_FOLLOW_GIMBAL_YAW: // 跟随云台,不单独设置pid,以误差角度平方为速度输出
-            chassis_cmd_recv.wz = chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle) * 1.5;
+            chassis_cmd_recv.wz = chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle) * 2;
             break;
         case CHASSIS_ROTATE: // 自旋,同时保持全向机动;当前wz维持定值,后续增加不规则的变速策略
             chassis_cmd_recv.wz = 4000;
@@ -363,3 +363,6 @@ void ChassisTask()
     PubPushMessage(chassis_pub, (void *)&chassis_feedback_data);
 #endif
 }
+#ifdef CHASSIS_BOARD
+
+#endif // DEBUG

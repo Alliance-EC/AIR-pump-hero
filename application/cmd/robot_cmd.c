@@ -36,7 +36,7 @@ static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信�
 static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
 static Chassis_Upload_Data_s chassis_send_data_ToUpboard;
 static RC_ctrl_t *rc_data;              // 遥控器数据,初始化时返回
-static Vision_Recv_s *vision_recv_data; // 视觉接收数据指针,初始化时返回
+
 
 static Publisher_t *gimbal_cmd_pub;            // 云台控制消息发布者
 static Subscriber_t *gimbal_feed_sub;          // 云台反馈信息订阅者
@@ -55,8 +55,6 @@ static SuperCapInstance Cap;
 void RobotCMDInit()
 {
     rc_data          = RemoteControlInit(&huart3); // 修改为对应串口,注意如果是自研板dbus协议串口需选用添加了反相器的那个 // 遥控器在底盘上 v v c
-    vision_recv_data = VisionInit(&huart1);        // 视觉通信串口
-
     gimbal_cmd_pub      = PubRegister("gimbal_cmd", sizeof(Gimbal_Ctrl_Cmd_s));
     gimbal_feed_sub     = SubRegister("gimbal_feed", sizeof(Gimbal_Upload_Data_s));
     shoot_cmd_pub       = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
@@ -117,19 +115,20 @@ static void MouseKeySet()
         shoot_cmd_send.shoot_mode     = SHOOT_OFF;
         shoot_cmd_send.load_mode      = LOAD_STOP;
     }
+    gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
     chassis_cmd_send.vy = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000;
     chassis_cmd_send.vx = rc_data[TEMP].key[KEY_PRESS].a * 80000 - rc_data[TEMP].key[KEY_PRESS].d * 80000;
 
     gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 1;
     gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 20;
     if (rc_data[TEMP].mouse.press_l == 1) {
-        shoot_cmd_send.air_pump_mode = AIR_PUMP_ON;//左键开火，有单发限制
+        shoot_cmd_send.air_pump_mode = AIR_PUMP_ON; // 左键开火，有单发限制
     } else
         shoot_cmd_send.air_pump_mode = AIR_PUMP_OFF;
     if (rc_data[TEMP].mouse.press_r == 1) {
         gimbal_cmd_send.vision_mode = VISION_ON;
     } else
-        gimbal_cmd_send.vision_mode = VISION_OFF;//右键开启自瞄
+        gimbal_cmd_send.vision_mode = VISION_OFF;             // 右键开启自瞄
     if (rc_data[TEMP].key_count[KEY_PRESS][Key_B] % 2 == 1) { // UI刷新
         if (UI_flag == 1) {
             MyUIInit();
@@ -150,18 +149,14 @@ static void MouseKeySet()
     switch (rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_V] % 2) // V键开启摩擦轮(气动等效摩擦轮)
     {
         case 1:
-            if (shoot_cmd_send.shoot_mode == SHOOT_OFF) {
                 shoot_cmd_send.shoot_mode = SHOOT_ON;
-            }
             break;
         case 0:
-            if (shoot_cmd_send.shoot_mode != SHOOT_ON) {
                 shoot_cmd_send.shoot_mode = SHOOT_OFF;
-            }
             break;
     }
 
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q] % 2) {//Q键打开望远镜
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q] % 2) { // Q键打开望远镜
         case 1:
             gimbal_cmd_send.sight_mode = SIGHT_ON;
             break;
@@ -170,7 +165,7 @@ static void MouseKeySet()
             break;
     }
 
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E] % 2) {//E键更改图传模式
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E] % 2) { // E键更改图传模式
         case 1:
             gimbal_cmd_send.image_mode = snipe;
             break;
@@ -217,8 +212,6 @@ static void RemoteControlSet()
         chassis_cmd_send.vx   = 100.0f * (float)rc_data[TEMP].rc.rocker_r_; // Chassis_水平方向
         chassis_cmd_send.vy   = 100.0f * (float)rc_data[TEMP].rc.rocker_r1; // Chassis_竖直方向
 
-        gimbal_cmd_send.gimbal_mode = GIMBAL_FREE_MODE; // 云台只有两个模式，或停止，或FREE
-
         switch (rc_data[TEMP].rc.switch_right) {
             case RC_SW_DOWN:
                 chassis_cmd_send.chassis_mode = CHASSIS_ROTATE; // 右下，左不下，底盘小陀螺 【发射时不进行小陀螺】
@@ -234,11 +227,12 @@ static void RemoteControlSet()
                 break;
         }
 
-        if(rc_data[TEMP].rc.dial< -330)
-        {
-            gimbal_cmd_send.vision_mode=VISION_ON;
-        }else {gimbal_cmd_send.vision_mode=VISION_OFF;}//拨轮打开自瞄
-
+        if (rc_data[TEMP].rc.dial < -330) {
+            gimbal_cmd_send.vision_mode = VISION_ON;
+        } else {
+            gimbal_cmd_send.vision_mode = VISION_OFF;
+        } // 拨轮打开自瞄
+        gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
         // 发射机构命令
         switch (rc_data[TEMP].rc.switch_left) {
             case RC_SW_UP:
@@ -311,7 +305,7 @@ void RobotCMDTask()
         MouseKeySet();
     } else
         RemoteControlSet();
-
+    
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
 

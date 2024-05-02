@@ -112,7 +112,7 @@ uint8_t CANTransmit(CANInstance *_instance, float timeout)
     {
         if (DWT_GetTimeline_ms() - dwt_start > timeout) // 超时
         {
-            LOGWARNING("[bsp_can] CAN MAILbox full! failed to add msg to mailbox. Cnt [%d]", busy_count);
+            LOGWARNING("[bsp_can] CAN MAILbox full! failed to add msg to mailbox.txid:0x%x Cnt [%d]",_instance->txconf.StdId, busy_count);
             busy_count++;
             return 0;
         }

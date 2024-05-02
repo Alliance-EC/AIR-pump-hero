@@ -240,7 +240,7 @@ void UI_dirction_draw()
     if (init_flag == 1) {
         UILineDraw(&Pitch_dirction, "PD3", Graphic_Operate_ADD, 8, Graphic_Color_Yellow, 2, Pitch_angle_X,
                    Pitch_angle_Y + 40, Pitch_angle_X + 60 * arm_cos_f32(-UI_last.pitch_data * DEGREE_2_RAD),
-                   Pitch_angle_Y + 40 + 60 * arm_sin_f32(-UI_last.pitch_data * DEGREE_2_RAD));
+                   Pitch_angle_Y + 40 + 60 * arm_sin_f32(UI_last.pitch_data * DEGREE_2_RAD));
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Pitch_dirction);
         UICircleDraw(&Dirction_Chassis1, "CD1", Graphic_Operate_ADD, 9, Graphic_Color_Pink, 2,
                      Center_Of_Dirction_X + Len_Dirction * arm_cos_f32((-UI_last.Angle + 45) * DEGREE_2_RAD),
@@ -260,7 +260,7 @@ void UI_dirction_draw()
     } else {
         UILineDraw(&Pitch_dirction, "PD3", Graphic_Operate_CHANGE, 8, Graphic_Color_Yellow, 2, Pitch_angle_X,
                    Pitch_angle_Y + 40, Pitch_angle_X + 60 * arm_cos_f32(-UI_last.pitch_data * DEGREE_2_RAD),
-                   Pitch_angle_Y + 40 + 60 * arm_sin_f32(-UI_last.pitch_data * DEGREE_2_RAD));
+                   Pitch_angle_Y + 40 + 60 * arm_sin_f32(UI_last.pitch_data * DEGREE_2_RAD));
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Pitch_dirction);
         UICircleDraw(&Dirction_Chassis1, "CD1", Graphic_Operate_CHANGE, 9, Graphic_Color_Pink, 2,
                      Center_Of_Dirction_X + Len_Dirction * arm_cos_f32((-UI_last.Angle + 45) * DEGREE_2_RAD),
