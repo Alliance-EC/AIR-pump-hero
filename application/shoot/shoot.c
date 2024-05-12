@@ -80,7 +80,7 @@ void One_Shoot_Task()
             // DJIMotorSetRef(loader, loader->measure.total_angle - ONE_BULLET_DELTA_ANGLE );
             DJIMotorEnable(loader);
             DJIMotorOuterLoop(loader, SPEED_LOOP);
-            DJIMotorSetRef(loader, 5000);
+            DJIMotorSetRef(loader, 4000);
             Loader_flag = 0;
         }
         if (photogate_state == 1) {
@@ -104,32 +104,41 @@ void One_Shoot_Task()
         NOW_MODE.now_step = FIRE;
         osDelay(100);
     }
-    if (NOW_MODE.now_step == FIRE && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON && One_Shoot_flag) {
+    if (NOW_MODE.now_step == FIRE) {
         if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_14) == GPIO_PIN_RESET) {
             HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
             NOW_MODE.now_step = FIRE;
             osDelay(700);
         }
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
-        osDelay(100);
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-        osDelay(600);
-        NOW_MODE.now_step = LOAD;
-        One_Shoot_flag    = 0;
-        Loader_flag       = 1;
+        if (shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON && One_Shoot_flag) {
+            HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
+            osDelay(100);
+            HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+            osDelay(600);
+            NOW_MODE.now_step = LOAD;
+            One_Shoot_flag    = 0;
+            Loader_flag       = 1;
+        }
     }
 }
 static uint8_t block_flag = 0;
+static uint16_t tick_block;
 static float Last_verb_Of_load;
 void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
 {
     if (
-        fabs(Now_verb_Of_load) <= (loader)->motor_controller.pid_ref / 400 && fabs(Last_verb_Of_load) <= (loader)->motor_controller.pid_ref / 400 && (loader)->motor_controller.pid_ref != 0) {
-        block_flag = 1;
-    } else
+        fabs(Now_verb_Of_load) <= (loader)->motor_controller.pid_ref / 400 && (loader)->motor_controller.pid_ref != 0) {
+        tick_block++;
+        if (tick_block >= 200) {
+            block_flag = 1;
+        } else {
+            block_flag = 0;
+        }
+    } else {
+        tick_block = 0;
         block_flag = 0;
-    Last_verb_Of_load = Now_verb_Of_load;
+    }
 }
 void ShootTask()
 {
@@ -143,11 +152,13 @@ void ShootTask()
 #ifdef GIMBAL_BROAD
 // 在robot.c可以获得值
 #endif // DEBUG
-   // block_shook_check((loader)->measure.speed_aps);
+    block_shook_check((loader)->measure.speed_aps);
     if (block_flag == 1) {
-        DJIMotorOuterLoop(loader, ANGLE_LOOP);
-        DJIMotorSetRef(loader, loader->measure.total_angle + ONE_BULLET_DELTA_ANGLE     );
+        DJIMotorEnable(loader);
+        DJIMotorOuterLoop(loader, SPEED_LOOP);
+        DJIMotorSetRef(loader, 2000);
         DWT_Delay(0.1);
+        DJIMotorSetRef(loader, 0);
         block_flag = 0;
     }
     if (Last_Air_Mode != shoot_cmd_recv.air_pump_mode && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON) { One_Shoot_flag = 1; }

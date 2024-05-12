@@ -16,6 +16,7 @@ typedef struct
     Shoot_Step Bullet_ready;
     ext_game_robot_HP_t All_robot_HP;
     float CapVot;
+    Shoot_Step Air_ready;
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;
 extern Graph_Data_t line_fuzhu_two;

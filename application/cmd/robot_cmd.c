@@ -35,8 +35,7 @@ static Subscriber_t *chassis_feed_sub; // 底盘反馈信息订阅者
 static Chassis_Ctrl_Cmd_s chassis_cmd_send;      // 发送给底盘应用的信息,包括控制信息和UI绘制相关
 static Chassis_Upload_Data_s chassis_fetch_data; // 从底盘应用接收的反馈信息信息,底盘功率枪口热量与底盘运动状态等
 static Chassis_Upload_Data_s chassis_send_data_ToUpboard;
-static RC_ctrl_t *rc_data;              // 遥控器数据,初始化时返回
-
+static RC_ctrl_t *rc_data; // 遥控器数据,初始化时返回
 
 static Publisher_t *gimbal_cmd_pub;            // 云台控制消息发布者
 static Subscriber_t *gimbal_feed_sub;          // 云台反馈信息订阅者
@@ -54,7 +53,7 @@ static Subscriber_t *Cap_data_For_UI;
 static SuperCapInstance Cap;
 void RobotCMDInit()
 {
-    rc_data          = RemoteControlInit(&huart3); // 修改为对应串口,注意如果是自研板dbus协议串口需选用添加了反相器的那个 // 遥控器在底盘上 v v c
+    rc_data             = RemoteControlInit(&huart3); // 修改为对应串口,注意如果是自研板dbus协议串口需选用添加了反相器的那个 // 遥控器在底盘上 v v c
     gimbal_cmd_pub      = PubRegister("gimbal_cmd", sizeof(Gimbal_Ctrl_Cmd_s));
     gimbal_feed_sub     = SubRegister("gimbal_feed", sizeof(Gimbal_Upload_Data_s));
     shoot_cmd_pub       = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
@@ -116,8 +115,8 @@ static void MouseKeySet()
         shoot_cmd_send.load_mode      = LOAD_STOP;
     }
     gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
-    chassis_cmd_send.vy = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000;
-    chassis_cmd_send.vx = rc_data[TEMP].key[KEY_PRESS].a * 80000 - rc_data[TEMP].key[KEY_PRESS].d * 80000;
+    chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000;
+    chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 80000 - rc_data[TEMP].key[KEY_PRESS].d * 80000;
 
     gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 1;
     gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 20;
@@ -149,10 +148,10 @@ static void MouseKeySet()
     switch (rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_V] % 2) // V键开启摩擦轮(气动等效摩擦轮)
     {
         case 1:
-                shoot_cmd_send.shoot_mode = SHOOT_ON;
+            shoot_cmd_send.shoot_mode = SHOOT_ON;
             break;
         case 0:
-                shoot_cmd_send.shoot_mode = SHOOT_OFF;
+            shoot_cmd_send.shoot_mode = SHOOT_OFF;
             break;
     }
 
@@ -283,6 +282,7 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
     UI_data.Max_HP       = referee_data.GameRobotState.max_HP;
     UI_data.Angle        = chassis_cmd_send.offset_angle;
     UI_data.CapVot       = Cap.cap_msg_s.CapVot;
+    UI_data.Air_ready    = shoot_fetch_data.bullet_ready;
 }
 
 void RobotCMDTask()
@@ -305,7 +305,7 @@ void RobotCMDTask()
         MouseKeySet();
     } else
         RemoteControlSet();
-    
+
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
 
@@ -328,9 +328,8 @@ void UItask(void *argument)
     /* USER CODE BEGIN UItask */
     /* Infinite loop */
     for (;;) {
-        if (check_to_change_UI(&UI_data) == 1) {
-            MyUIRefresh();
-        }
+        check_to_change_UI(&UI_data);
+        MyUIRefresh();
         UIfresh_Always();
         osDelay(40);
     }

@@ -39,5 +39,7 @@
 #define Pitch_angle_Y 400
 #define Radius_Pitch 80
 
+#define center_tigger_X (SCREEN_LENGTH/2-50)
+#define center_tigger_Y (SCREEN_WIDTH/2-50)
 
 #endif

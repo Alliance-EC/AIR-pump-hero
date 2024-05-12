@@ -25,6 +25,7 @@ static DJIMotorInstance *yaw_motor, *pitch_motor;
 // 转存遥控器数据，避免在数据传输时使用+=，减轻调试负担
 float yaw_input;
 float pitch_input;
+int single_gimbal;
 int gimbal_init_flag; // 用于对电机进行初始输入
 #ifdef ONE_BOARD
 static Publisher_t *gimbal_pub;  // 云台应用消息发布者(云台反馈给cmd)
@@ -230,7 +231,7 @@ void GimbalTask()
 
     switch (gimbal_cmd_recv.sight_mode) {
         case SIGHT_ON:
-            Servo_Motor_FreeAngle_Set(sight_module, 173);
+            Servo_Motor_FreeAngle_Set(sight_module, 174);
             break;
         case SIGHT_OFF:
             Servo_Motor_FreeAngle_Set(sight_module, 80);
@@ -239,7 +240,7 @@ void GimbalTask()
 
     switch (gimbal_cmd_recv.image_mode) {
          case Follow_shoot:
-            Servo_Motor_FreeAngle_Set(image_module, 80);
+            Servo_Motor_FreeAngle_Set(image_module,122);
             break;
         case snipe:
             Servo_Motor_FreeAngle_Set(image_module, 88 - gimbal_IMU_data->output.INS_angle_deg[0] * 0.8);
