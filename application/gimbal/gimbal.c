@@ -38,7 +38,6 @@ float vision_yaw, vision_pitch, vision_flag;
 // 仅供云台内部函数使用
 static void GimbalInputGet()
 {
-    MX_USB_DEVICE_Init();
     memcpy(&vision_yaw, vision_recv_data, sizeof(float));
     memcpy(&vision_pitch, vision_recv_data + 4, sizeof(float));
     // 接受发射指令
@@ -47,13 +46,22 @@ static void GimbalInputGet()
         yaw_input += gimbal_cmd_recv.yaw / 3.0f;
         pitch_input += gimbal_cmd_recv.pitch / 200;
     } else {
-        yaw_input   = vision_yaw + gimbal_IMU_data->INS_data.INS_gyro[INS_YAW_ADDRESS_OFFSET];
+        yaw_input   = vision_yaw + gimbal_IMU_data->output.Yaw_total_angle;
         pitch_input = vision_pitch + gimbal_IMU_data->output.INS_angle[INS_PITCH_ADDRESS_OFFSET];
     }
     if (pitch_input > PITCH_MAX_ANGLE)
         pitch_input = PITCH_MAX_ANGLE;
     if (pitch_input < PITCH_MIN_ANGLE)
         pitch_input = PITCH_MIN_ANGLE;
+    while (-yaw_input - 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle)
+        yaw_input += 2 * 3.141592654;
+    while (-yaw_input + 2 * 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle)
+        yaw_input -= 2 * 3.141592654;
+    if (-yaw_input - 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle && -yaw_input - 2 * 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle) {
+        yaw_input += 2 * 3.141592654;
+    } else if (-yaw_input + 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle && -yaw_input + 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle) {
+        yaw_input -= 2 * 3.141592654;
+    }
 }
 
 void HOST_RECV_CALLBACK()
@@ -70,7 +78,7 @@ void GimbalInit()
         .comm_mode = HOST_VCP,
         .RECV_SIZE = 8,
     };
-    host_instance = HostInit(&host_conf); // 视觉通信串口
+    host_instance                           = HostInit(&host_conf); // 视觉通信串口
     Servo_Init_Config_s servo_vision_config = {
         .Channel          = TIM_CHANNEL_1,
         .htim             = &htim1,
@@ -121,7 +129,7 @@ void GimbalInit()
     Motor_Init_Config_s yaw_config = {
         .can_init_config = {
             .can_handle = &hcan2,
-            .tx_id      = 1,
+            .tx_id      = 2,
         },
         .controller_param_init_config = {
             .angle_PID = {
@@ -239,8 +247,8 @@ void GimbalTask()
     }
 
     switch (gimbal_cmd_recv.image_mode) {
-         case Follow_shoot:
-            Servo_Motor_FreeAngle_Set(image_module,122);
+        case Follow_shoot:
+            Servo_Motor_FreeAngle_Set(image_module, 122);
             break;
         case snipe:
             Servo_Motor_FreeAngle_Set(image_module, 88 - gimbal_IMU_data->output.INS_angle_deg[0] * 0.8);
@@ -256,6 +264,7 @@ void GimbalTask()
         // 使用陀螺仪的反馈,底盘根据yaw电机的offset跟随云台或视觉模式采用
         case GIMBAL_GYRO_MODE: // 后续只保留此模式
             GimbalInputGet();
+            // DJIMotorStop(pitch_motor);
             DJIMotorEnable(yaw_motor);
             DJIMotorEnable(pitch_motor);
             DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
@@ -268,6 +277,7 @@ void GimbalTask()
         // 云台自由模式,使用编码器反馈,底盘和云台分离,仅云台旋转,一般用于调整云台姿态(英雄吊射等)/能量机关
         case GIMBAL_FREE_MODE: // 后续删除,或加入云台追地盘的跟随模式(响应速度更快)
             GimbalInputGet();
+            // DJIMotorStop(pitch_motor); 
             DJIMotorEnable(yaw_motor);
             DJIMotorEnable(pitch_motor);
             DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
@@ -287,7 +297,6 @@ void GimbalTask()
 
     // 设置反馈数据,主要是imu和yaw的ecd
     // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
-    
 
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
     gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[0];

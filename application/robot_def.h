@@ -16,15 +16,15 @@
 #include "master_process.h"
 #include "stdint.h"
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
-//#define ONE_BOARD // 单板控制整车ONE_BOARD
- #define CHASSIS_BOARD //底盘板
-// #define GIMBAL_BOARD  //云台板
+// #define ONE_BOARD // 单板控制整车ONE_BOARD
+//  #define CHASSIS_BOARD //底盘板
+#define GIMBAL_BOARD  //云台板
 #define VISION_USE_VCP // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 云台参数
-#define YAW_CHASSIS_ALIGN_ECD     7960 // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
+#define YAW_CHASSIS_ALIGN_ECD     4386 // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
 #define YAW_ECD_GREATER_THAN_4096 0    // ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度
 #define PITCH_HORIZON_ECD         7979 // 云台处于水平位置时编码器值,若对云台有机械改动需要修改
 #define PITCH_MAX_ANGLE           0.71   // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
@@ -55,7 +55,20 @@
 #define GYRO2GIMBAL_DIR_YAW        1 // 陀螺仪数据相较于云台的yaw的方向,1为相同,-1为相反
 #define GYRO2GIMBAL_DIR_PITCH      1 // 陀螺仪数据相较于云台的pitch的方向,1为相同,-1为相反
 #define GYRO2GIMBAL_DIR_ROLL       1 // 陀螺仪数据相较于云台的roll的方向,1为相同,-1为相反
+// 超级电容宏定义
+#define SUPERCAP_VOLTAGE_ENOUGH     (1)
+#define SUPERCAP_VOLTAGE_ENOUGH_NOT (0)
 
+#define SUPERCAP_RELAY_FLAG_FROM_USER_OPEN  (1)
+#define SUPERCAP_RELAY_FLAG_FROM_USER_CLOSE (0)
+
+#define SUPERCAP_RELAY_FLAG_FROM_CAN_OPEN  (1)
+#define SUPERCAP_RELAY_FLAG_FROM_CAN_CLOSE (0)
+
+#define SUPERCAP_OPEN_FLAG_FROM_REAL_OPEN (0)
+#define SUPERCAP_OPEN_FLAG_FROM_REAL_CLOSE (1)
+
+#define SUPER_VOLT_MIN (12.0f)
 // 其他参数(尽量所有参数集中到此文件)
 #define BUZZER_SILENCE 0 // 蜂鸣器静音,1为静音,0为正常
 
