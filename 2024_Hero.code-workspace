@@ -25,7 +25,8 @@
 			"daemon.h": "c",
 			"rm_referee.h": "c",
 			"stdint.h": "c",
-			"power_calc.h": "c"
+			"power_calc.h": "c",
+			"master_process.h": "c"
 		},
 		"editor.inlineSuggest.showToolbar": "onHover",
 		"clang-format.executable": "E:\\Msys2\\clang64\\bin\\clang-format.exe",

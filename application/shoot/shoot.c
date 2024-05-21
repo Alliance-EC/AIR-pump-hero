@@ -96,7 +96,7 @@ void One_Shoot_Task()
 
             DJIMotorStop(loader);
             tick_num1++;
-            if (tick_num1 >= 25) { NOW_MODE.now_step = PUSH; }
+            if (tick_num1 >= 50) { NOW_MODE.now_step = PUSH; }
         }
     }
     if (NOW_MODE.now_step == PUSH) {
@@ -115,7 +115,7 @@ void One_Shoot_Task()
             osDelay(100);
             HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
             HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-            osDelay(600);
+            osDelay(1000);
             NOW_MODE.now_step = LOAD;
             One_Shoot_flag    = 0;
             Loader_flag       = 1;

@@ -35,6 +35,8 @@ static Subscriber_t *gimbal_sub; // cmd控制消息订阅者
 Gimbal_Upload_Data_s gimbal_feedback_data; // 回传给cmd的云台状态信息
 Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 float vision_yaw, vision_pitch, vision_flag;
+USARTInstance *IMU_data_out;
+ IMU_data_outside IMU_DATA;
 // 仅供云台内部函数使用
 static void GimbalInputGet()
 {
@@ -53,7 +55,7 @@ static void GimbalInputGet()
         pitch_input = PITCH_MAX_ANGLE;
     if (pitch_input < PITCH_MIN_ANGLE)
         pitch_input = PITCH_MIN_ANGLE;
-    while (-yaw_input - 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle)
+    while (-yaw_input - 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle)//过圈处理
         yaw_input += 2 * 3.141592654;
     while (-yaw_input + 2 * 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle)
         yaw_input -= 2 * 3.141592654;
@@ -69,10 +71,26 @@ void HOST_RECV_CALLBACK()
     memcpy(vision_recv_data, host_instance->comm_instance, host_instance->RECV_SIZE);
     vision_recv_data[8] = 1;
 }
-// 供robot.c调用的外部接口
-
+static uint16_t CRC_check, LEN;
+static void IMUdataRxCallback()
+{
+    if (IMU_data_out->recv_buff[0] == 0x5A) {
+        if (IMU_data_out->recv_buff[1] == 0xA5) {
+            
+            memcpy(&IMU_DATA, &IMU_data_out->recv_buff[6], sizeof(IMU_data_outside));
+        }
+        else return ;
+    }
+    else return ;
+}
 void GimbalInit()
 {
+    USART_Init_Config_s IMU_config_outside = {
+        .recv_buff_size  = 82, // 字节
+        .usart_handle    = &huart1,
+        .module_callback = IMUdataRxCallback,
+    };
+    ///IMU_data_out               = USARTRegister(&IMU_config_outside);
     HostInstanceConf host_conf = {
         .callback  = HOST_RECV_CALLBACK,
         .comm_mode = HOST_VCP,
@@ -251,7 +269,7 @@ void GimbalTask()
             Servo_Motor_FreeAngle_Set(image_module, 122);
             break;
         case snipe:
-            Servo_Motor_FreeAngle_Set(image_module, 88 - gimbal_IMU_data->output.INS_angle_deg[0] * 0.8);
+            Servo_Motor_FreeAngle_Set(image_module, 104);
             break;
     }
 
@@ -277,7 +295,7 @@ void GimbalTask()
         // 云台自由模式,使用编码器反馈,底盘和云台分离,仅云台旋转,一般用于调整云台姿态(英雄吊射等)/能量机关
         case GIMBAL_FREE_MODE: // 后续删除,或加入云台追地盘的跟随模式(响应速度更快)
             GimbalInputGet();
-            // DJIMotorStop(pitch_motor); 
+            // DJIMotorStop(pitch_motor);
             DJIMotorEnable(yaw_motor);
             DJIMotorEnable(pitch_motor);
             DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);

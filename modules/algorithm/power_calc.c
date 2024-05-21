@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <math.h>
 
-float k1                = 4.e-05f;
-float k2                = -9.359e-09f;
-float constant          = 0.5662f;
+float k1                = 1.17248e-07f;
+float k2                = 2.111111111e-07f;
+float constant          = -1;
 float toque_coefficient = 2.949745771e-06f; // (20/16384) * (0.3) / (9.55)
 
 float reduction_ratio, total_power;
@@ -51,6 +51,7 @@ float TotalPowerCalc(float input_power[])
 
 float CurrentOutputCalc(float motor_power, float motor_speed, float motor_current)
 {
+    motor_speed/=6;
     if (total_power > max_power) {
         float power_scale = max_power / total_power;
         motor_power *= power_scale ;

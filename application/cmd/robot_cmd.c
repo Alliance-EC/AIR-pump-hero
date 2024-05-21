@@ -11,6 +11,7 @@
 #include "super_cap.h"
 #include "dji_motor.h"
 #include "buzzer.h"
+#include "power_calc.h"
 // bsp
 #include "bsp_dwt.h"
 #include "bsp_log.h"
@@ -115,11 +116,11 @@ static void MouseKeySet()
         shoot_cmd_send.load_mode      = LOAD_STOP;
     }
     gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
-    chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000;
-    chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 80000 - rc_data[TEMP].key[KEY_PRESS].d * 80000;
+    chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 30000 - rc_data[TEMP].key[KEY_PRESS].s * 30000;
+    chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 30000 - rc_data[TEMP].key[KEY_PRESS].d * 30000;
 
-    gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 1;
-    gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 20;
+    gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 0.5;
+    gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 10;
     if (rc_data[TEMP].mouse.press_l == 1) {
         shoot_cmd_send.air_pump_mode = AIR_PUMP_ON; // 左键开火，有单发限制
     } else
@@ -195,6 +196,7 @@ static void MouseKeySet()
 }
 static int8_t start_flag;
 static int8_t air_flag, loader_flag;
+uint8_t rotate_flag;
 static void RemoteControlSet()
 {
     if ((rc_data[TEMP].rc.switch_left == RC_SW_DOWN) && (rc_data[TEMP].rc.switch_right == RC_SW_DOWN)) {
@@ -208,8 +210,8 @@ static void RemoteControlSet()
         // 云台底盘命令
         gimbal_cmd_send.yaw   = 0.0001f * (float)rc_data[TEMP].rc.rocker_l_;
         gimbal_cmd_send.pitch = 0.002f * (float)rc_data[TEMP].rc.rocker_l1;
-        chassis_cmd_send.vx   = 100.0f * (float)rc_data[TEMP].rc.rocker_r_; // Chassis_水平方向
-        chassis_cmd_send.vy   = 100.0f * (float)rc_data[TEMP].rc.rocker_r1; // Chassis_竖直方向
+        chassis_cmd_send.vx   = 40.0f * (float)rc_data[TEMP].rc.rocker_r_; // Chassis_水平方向
+        chassis_cmd_send.vy   = 40.0f * (float)rc_data[TEMP].rc.rocker_r1; // Chassis_竖直方向
 
         switch (rc_data[TEMP].rc.switch_right) {
             case RC_SW_DOWN:
@@ -231,6 +233,9 @@ static void RemoteControlSet()
         } else {
             gimbal_cmd_send.vision_mode = VISION_OFF;
         } // 拨轮打开自瞄
+        if(rc_data[TEMP].rc.switch_left==RC_SW_UP)
+        rotate_flag=1;
+        if(rc_data[TEMP].rc.switch_left==RC_SW_MID) rotate_flag=0;
         gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
         // 发射机构命令
         switch (rc_data[TEMP].rc.switch_left) {
@@ -284,7 +289,8 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
     UI_data.CapVot       = Cap.cap_msg_s.CapVot;
     UI_data.Air_ready    = shoot_fetch_data.bullet_ready;
 }
-
+extern Power_Data_s  power_data;
+extern DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb;
 void RobotCMDTask()
 {
     // 从其他应用获取回传数据
@@ -310,6 +316,13 @@ void RobotCMDTask()
     Get_UI_Data();
 
 #ifdef CHASSIS_BOARD
+    // chassis_send_data_ToUpboard.current1=motor_lf->motor_controller.speed_PID.Output;
+    // chassis_send_data_ToUpboard.current2=motor_rf->motor_controller.speed_PID.Output;
+    // chassis_send_data_ToUpboard.current3=motor_lb->motor_controller.speed_PID.Output;
+    // chassis_send_data_ToUpboard.current4=motor_rb->motor_controller.speed_PID.Output;
+    // chassis_send_data_ToUpboard.speed_aps=motor_rb->measure.speed_aps;
+    // chassis_send_data_ToUpboard.pre_power=power_data.total_power;
+    // chassis_send_data_ToUpboard.real_power=referee_data.PowerHeatData.chassis_power;
     chassis_send_data_ToUpboard.gimbal_cmd_upload = gimbal_cmd_send;
     chassis_send_data_ToUpboard.shoot_cmd_upload  = shoot_cmd_send;
     CANCommSend(chassis_can_comm, (void *)&chassis_send_data_ToUpboard);
