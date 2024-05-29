@@ -116,8 +116,8 @@ static void MouseKeySet()
         shoot_cmd_send.load_mode      = LOAD_STOP;
     }
     gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
-    chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 30000 - rc_data[TEMP].key[KEY_PRESS].s * 30000;
-    chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 30000 - rc_data[TEMP].key[KEY_PRESS].d * 30000;
+    chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 26400 - rc_data[TEMP].key[KEY_PRESS].s * 26400;
+    chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 26400 - rc_data[TEMP].key[KEY_PRESS].d * 26400;
 
     gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 0.5;
     gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 10;
@@ -164,16 +164,25 @@ static void MouseKeySet()
             gimbal_cmd_send.sight_mode = SIGHT_OFF;
             break;
     }
-
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E] % 2) { // E键更改图传模式
+     switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q] % 2) { // Q键打开望远镜
+        case 1:
+            gimbal_cmd_send.sight_mode = SIGHT_ON;
+            break;
+        case 0:
+            gimbal_cmd_send.sight_mode = SIGHT_OFF;
+            break;
+    }
+    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E] % 3) { // E键更改图传模式
         case 1:
             gimbal_cmd_send.image_mode = snipe;
             break;
         case 0:
             gimbal_cmd_send.image_mode = Follow_shoot;
             break;
+        case 2:
+        gimbal_cmd_send.image_mode = sentry;
+        break;
     }
-
     if (last_count_F != rc_data[TEMP].key_count[KEY_PRESS][Key_F]) // 云台自由模式
     {
         if (chassis_cmd_send.chassis_mode == CHASSIS_NO_FOLLOW) {
@@ -275,6 +284,7 @@ static void RemoteControlSet()
  */
 /* 机器人核心控制任务,200Hz频率运行(必须高于视觉发送频率) */
 static referee_info_t referee_data;
+
 void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 {
     UI_data.Bullet_ready = shoot_fetch_data.bullet_ready;
@@ -288,6 +298,10 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
     UI_data.Angle        = chassis_cmd_send.offset_angle;
     UI_data.CapVot       = Cap.cap_msg_s.CapVot;
     UI_data.Air_ready    = shoot_fetch_data.bullet_ready;
+    UI_data.vision_servo = gimbal_cmd_send.image_mode;
+    if(referee_data.referee_id.Robot_Color>7)
+    UI_data.outpost_HP = referee_data.GameRobotHP.red_outpost_HP;
+    else UI_data.outpost_HP = referee_data.GameRobotHP.blue_base_HP;
 }
 extern Power_Data_s  power_data;
 extern DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb;
@@ -325,6 +339,9 @@ void RobotCMDTask()
     // chassis_send_data_ToUpboard.real_power=referee_data.PowerHeatData.chassis_power;
     chassis_send_data_ToUpboard.gimbal_cmd_upload = gimbal_cmd_send;
     chassis_send_data_ToUpboard.shoot_cmd_upload  = shoot_cmd_send;
+    if(referee_data.GameRobotState.mains_power_shooter_output==0)
+    chassis_send_data_ToUpboard.shoot_cmd_upload.Shoot_power=POWER_OFF;
+    else chassis_send_data_ToUpboard.shoot_cmd_upload.Shoot_power=POWER_ON;
     CANCommSend(chassis_can_comm, (void *)&chassis_send_data_ToUpboard);
 #endif // DEBUG
 

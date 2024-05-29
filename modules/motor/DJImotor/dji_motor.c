@@ -187,7 +187,7 @@ DJIMotorInstance *DJIMotorInit(Motor_Init_Config_s *config)
     };
     instance->daemon = DaemonRegister(&daemon_config);
 
-    DJIMotorEnable(instance);
+    DJIMotorStop(instance);
     dji_motor_instance[idx++] = instance;
     return instance;
 }

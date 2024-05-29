@@ -13,15 +13,14 @@ referee_info_t *referee_data_for_ui;
 static char char_pitch[50];
 static char char_friction_mode[50];
 static char char_rotate_mode[50];
-static String_Data_t Robot1, Robot2, Robot3, Robot4, Robot5, Robotsentry;
-static Graph_Data_t Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP, RobotsentryHP;
 static Graph_Data_t Line_fuzhu_center_1, Line_fuzhu_center_2;
-static Graph_Data_t Line_fuzhu_5m,Line_fuzhu_10m,Line_fuzhu_8m;
+static Graph_Data_t Line_fuzhu_5m, Line_fuzhu_10m, Line_fuzhu_8m;
 // 辅助线图形变量
 // static Graph_Data_t line_fuzhu_nine;
 static Graph_Data_t Dirction_Chassis1, Dirction_Chassis2, Dirction_Chassis3, Dirction_Chassis4, Dirction_forward;
 static Graph_Data_t Pitch_chassis, Pitch_gimbal, Pitch_dirction;
 static String_Data_t CAP_1;
+static String_Data_t Image_mode;
 static String_Data_t friction_mode;
 static String_Data_t rotate_mode;
 static String_Data_t HP_remain_worry;
@@ -31,7 +30,9 @@ static Graph_Data_t Shoot_mode_line1;
 static Graph_Data_t Shoot_mode_line2;
 static Graph_Data_t Shoot_mode_circle;
 static Graph_Data_t Pitch_angle;
+static Graph_Data_t Outpost_Hp;
 static UIdate_for_change *UI_Now;
+uint8_t outpost_zero = 1;
 uint8_t check_to_change_UI(UIdate_for_change *UI_now) // 检测UI改变
 {
     UI_Now = UI_now;
@@ -55,14 +56,7 @@ void MyUIInit(void)
     UIDelete(&referee_data_for_ui->referee_id, UI_Data_Del_ALL, 0);
     memset(char_friction_mode, '\0', sizeof(friction_mode));
     memset(char_rotate_mode, '\0', sizeof(rotate_mode));
-    UILineDraw(&Dirction_forward, "CD5", Graphic_Operate_ADD, 8, Graphic_Color_Green, 2, Center_Of_Dirction_X,
-               Center_Of_Dirction_Y, Center_Of_Dirction_X,
-               Center_Of_Dirction_Y + 120);
     UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_forward);
-    UIRectangleDraw(&Pitch_chassis, "PD1", Graphic_Operate_ADD, 9, Graphic_Color_Pink, 2, Pitch_angle_X + 100 * 0.5,
-                    Pitch_angle_Y + 100 * 0.2, Pitch_angle_X - 100 * 0.5, Pitch_angle_Y - 100 * 0.2);
-    UICircleDraw(&Pitch_gimbal, "PD2", Graphic_Operate_ADD, 9, Graphic_Color_Pink, 2, Pitch_angle_X, Pitch_angle_Y + 40, 30);
-    UIGraphRefresh(&referee_data_for_ui->referee_id, 2, Pitch_chassis, Pitch_gimbal);
     // UILineDraw(&auxiliary_line_fourteen, "114", Graphic_Operate_ADD, 5, Graphic_Color_White, 2, SCREEN_LENGTH / 2 - 30, SCREEN_WIDTH / 2 - 150, SCREEN_LENGTH / 2 - 30, SCREEN_WIDTH / 2);
     // UILineDraw(&Dirction_Gimbal, "GIM", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 2, Center_Of_Dirction_X, Center_Of_Dirction_Y, Center_Of_Dirction_X, Center_Of_Dirction_Y + 100);
     // UIGraphRefresh(&referee_data_for_ui->referee_id, 1, auxiliary_line_fourteen);
@@ -75,10 +69,10 @@ void MyUIInit(void)
     UICharRefresh(&referee_data_for_ui->referee_id, CAP_1);
     if (UI_last.shoot_mode == 1) {
         UILineDraw(&Line_fuzhu_center_1, "FZ1", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, center_tigger_X - 50, center_tigger_Y, center_tigger_X + 50, center_tigger_Y);
-        UILineDraw(&Line_fuzhu_center_2, "FZ2", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X, center_tigger_Y + 100, center_tigger_X, center_tigger_Y - 100);
-        UILineDraw(&Line_fuzhu_5m, "FZ3", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X-70, center_tigger_Y -20, center_tigger_X+70, center_tigger_Y - 20 );
-        UILineDraw(&Line_fuzhu_10m, "FZ4", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X-90, center_tigger_Y -125, center_tigger_X+90, center_tigger_Y - 125 );
-        UILineDraw(&Line_fuzhu_8m, "FZ5", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X-80, center_tigger_Y -70, center_tigger_X+80, center_tigger_Y - 70 );
+        UILineDraw(&Line_fuzhu_center_2, "FZ2", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X, center_tigger_Y + 100, center_tigger_X, center_tigger_Y - 200);
+        UILineDraw(&Line_fuzhu_5m, "FZ3", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X - 70, center_tigger_Y - 20, center_tigger_X + 70, center_tigger_Y - 20);
+        UILineDraw(&Line_fuzhu_10m, "FZ4", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X - 90, center_tigger_Y - 125, center_tigger_X + 90, center_tigger_Y - 125);
+        UILineDraw(&Line_fuzhu_8m, "FZ5", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X - 80, center_tigger_Y - 70, center_tigger_X + 80, center_tigger_Y - 70);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_8m);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_10m);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_center_2);
@@ -91,15 +85,15 @@ void MyUIInit(void)
     }
     if (UI_last.chassis_mode == CHASSIS_FOLLOW_GIMBAL_YAW) {
         sprintf(rotate_mode.show_Data, "FOLLOW");
-        UICharDraw(&rotate_mode, "003", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH/2-200, SCREEN_WIDTH/2+100, char_pitch);
+        UICharDraw(&rotate_mode, "003", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
         UICharRefresh(&referee_data_for_ui->referee_id, rotate_mode);
     } else if (UI_last.chassis_mode == CHASSIS_NO_FOLLOW) {
         sprintf(rotate_mode.show_Data, "FREE  ");
-        UICharDraw(&rotate_mode, "003", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH/2-200, SCREEN_WIDTH/2+100, char_pitch);
+        UICharDraw(&rotate_mode, "003", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
         UICharRefresh(&referee_data_for_ui->referee_id, rotate_mode);
     } else {
         sprintf(rotate_mode.show_Data, "ROTATE");
-        UICharDraw(&rotate_mode, "003", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH/2-200, SCREEN_WIDTH/2+100, char_pitch);
+        UICharDraw(&rotate_mode, "003", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
         UICharRefresh(&referee_data_for_ui->referee_id, rotate_mode);
     }
     if (UI_last.remain_HP <= 100) {
@@ -108,7 +102,7 @@ void MyUIInit(void)
         UICharRefresh(&referee_data_for_ui->referee_id, HP_remain_worry);
     } else {
         sprintf(HP_remain_worry.show_Data, "           ");
-        UICharDraw(&HP_remain_worry, "004", Graphic_Operate_DEL, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 - 200, SCREEN_WIDTH / 2 + 200, char_pitch);
+        UICharDraw(&HP_remain_worry, "004", Graphic_Operate_DEL, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 100, char_pitch);
         UICharRefresh(&referee_data_for_ui->referee_id, HP_remain_worry);
     }
     if (referee_data_for_ui->referee_id.Robot_Color == Robot_Red) {
@@ -151,75 +145,112 @@ void MyUIInit(void)
         // UICharRefresh(&referee_data_for_ui->referee_id, Robotsentry);
     }
     UICircleDraw(&Dirction_Chassis1, "CD1", Graphic_Operate_ADD, 9, Graphic_Color_Pink, 2,
-                     Center_Of_Dirction_X + Len_Dirction ,
-                     Center_Of_Dirction_Y + Len_Dirction , 30);
+                 Center_Of_Dirction_X,
+                 Center_Of_Dirction_Y, 30);
     UILineDraw(&Dirction_Chassis2, "CD2", Graphic_Operate_ADD, 9, Graphic_Color_Pink, 2,
-                     Center_Of_Dirction_X  ,
-                     Center_Of_Dirction_Y  ,Center_Of_Dirction_X,Center_Of_Dirction_Y);
+               Center_Of_Dirction_X,
+               Center_Of_Dirction_Y, Center_Of_Dirction_X, Center_Of_Dirction_Y + 30);
     UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_Chassis1);
-    UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_Chassis2);      
+    UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_Chassis2);
     init_flag = 1;
+    if (UI_Now->vision_servo == Follow_shoot) {
+        sprintf(Image_mode.show_Data, "Normal");
+        UICharDraw(&Image_mode, "VSM", Graphic_Operate_ADD, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 + 400, SCREEN_WIDTH / 2 + 200, char_pitch);
+        UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+    } else if (UI_Now->vision_servo == snipe) {
+        sprintf(Image_mode.show_Data, "base");
+        UICharDraw(&Image_mode, "VSM", Graphic_Operate_ADD, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 + 400, SCREEN_WIDTH / 2 + 200, char_pitch);
+        UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+    } else if (UI_Now->vision_servo == sentry) {
+        sprintf(Image_mode.show_Data, "sentry");
+        UICharDraw(&Image_mode, "VSM", Graphic_Operate_ADD, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 + 400, SCREEN_WIDTH / 2 + 200, char_pitch);
+        UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+    }
+    UIIntDraw(&Outpost_Hp, "OTP", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 200, SCREEN_WIDTH / 2, 0);
+    UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Outpost_Hp);
 }
 
 void MyUIRefresh(void)
 {
-    if(UI_last.Angle!=UI_Now->Angle)
-    {
-        UILineDraw(&Dirction_Chassis2, "CD2", Graphic_Operate_CHANGE, 9, Graphic_Color_Pink, 2,
-                     Center_Of_Dirction_X  ,
-                     Center_Of_Dirction_Y  ,Center_Of_Dirction_X+30*arm_cos_f32((UI_Now->Angle+90)* DEGREE_2_RAD),Center_Of_Dirction_Y+30*arm_sin_f32(arm_cos_f32((UI_Now->Angle+90)* DEGREE_2_RAD)));
-        UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_Chassis2);      
+    if (UI_last.outpost_HP != UI_Now->outpost_HP && outpost_zero) {
+        UIIntDraw(&Outpost_Hp, "OTP", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 200, SCREEN_WIDTH / 2, UI_Now->outpost_HP);
+        UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Outpost_Hp);
     }
-    if (UI_last.shoot_mode != UI_Now->shoot_mode) {
-        if (UI_Now->     shoot_mode == 1) {
-            UILineDraw(&Shoot_mode_line1, "SM1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 2, 0, 0, 0, 0);
-            UILineDraw(&Shoot_mode_line2, "SM2", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 2, 0, 0, 0, 0);
-            UICircleDraw(&Shoot_mode_circle, "SM3", Graphic_Operate_DEL, 4, Graphic_Color_Green, 2, SCREEN_LENGTH, SCREEN_LENGTH, 0);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_line1);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_line2);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_circle);
+    if (UI_Now->outpost_HP == 0) {
+        UIIntDraw(&Outpost_Hp, "OTP", Graphic_Operate_DEL, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, 0);
+        UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Outpost_Hp);
+        outpost_zero = 0;
+    }
+    if (UI_last.vision_servo != UI_Now->vision_servo) {
+        if (UI_Now->vision_servo == Follow_shoot) {
+            sprintf(Image_mode.show_Data, "normal");
             UILineDraw(&Line_fuzhu_center_1, "FZ1", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, center_tigger_X - 50, center_tigger_Y, center_tigger_X + 50, center_tigger_Y);
-            UILineDraw(&Line_fuzhu_center_2, "FZ2", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X, center_tigger_Y + 140, center_tigger_X, center_tigger_Y - 140);
-            UILineDraw(&Line_fuzhu_5m, "FZ3", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X-70, center_tigger_Y -20, center_tigger_X+50, center_tigger_Y - 20 );
-            UILineDraw(&Line_fuzhu_10m, "FZ4", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X-90, center_tigger_Y -125, center_tigger_X+90, center_tigger_Y - 125 );
-            UILineDraw(&Line_fuzhu_8m, "FZ5", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X-80, center_tigger_Y -70, center_tigger_X+80, center_tigger_Y - 70 );
+            UILineDraw(&Line_fuzhu_center_2, "FZ2", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X, center_tigger_Y + 100, center_tigger_X, center_tigger_Y - 200);
+            UILineDraw(&Line_fuzhu_5m, "FZ3", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X - 70, center_tigger_Y - 20, center_tigger_X + 70, center_tigger_Y - 20);
+            UILineDraw(&Line_fuzhu_10m, "FZ4", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X - 90, center_tigger_Y - 125, center_tigger_X + 90, center_tigger_Y - 125);
+            UILineDraw(&Line_fuzhu_8m, "FZ5", Graphic_Operate_ADD, 6, Graphic_Color_Yellow, 1, center_tigger_X - 80, center_tigger_Y - 70, center_tigger_X + 80, center_tigger_Y - 70);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_8m);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_10m);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_center_2);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_center_1);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_5m);
-            // 画辅助线
+            UICharDraw(&Image_mode, "VSM", Graphic_Operate_DEL, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 + 400, SCREEN_WIDTH / 2 + 200, char_pitch);
+            UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+            UICharDraw(&Image_mode, "VSM", Graphic_Operate_ADD, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 + 400, SCREEN_WIDTH / 2 + 200, char_pitch);
+            UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
         } else {
-            UILineDraw(&Shoot_mode_line1, "SM1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 2, SCREEN_LENGTH / 2 - 60, SCREEN_WIDTH / 2 - 60, SCREEN_LENGTH / 2 + 60, SCREEN_WIDTH / 2 + 60);
-            UILineDraw(&Shoot_mode_line2, "SM2", Graphic_Operate_ADD, 6, Graphic_Color_Purplish_red, 2, SCREEN_LENGTH / 2 + 60, SCREEN_WIDTH / 2 - 60, SCREEN_LENGTH / 2 - 60, SCREEN_WIDTH / 2 + 60);
-            UICircleDraw(&Shoot_mode_circle, "SM3", Graphic_Operate_ADD, 4, Graphic_Color_Green, 2, SCREEN_LENGTH, SCREEN_LENGTH, 40);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_line1);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_line2);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_circle);
             UILineDraw(&Line_fuzhu_center_1, "FZ1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 2, Center_Of_Dirction_X - 100, Center_Of_Dirction_Y, Center_Of_Dirction_X + 100, Center_Of_Dirction_Y);
             UILineDraw(&Line_fuzhu_center_2, "FZ2", Graphic_Operate_DEL, 6, Graphic_Color_Purplish_red, 2, Center_Of_Dirction_X, Center_Of_Dirction_Y + 100, Center_Of_Dirction_X, Center_Of_Dirction_Y - 100);
-            UILineDraw(&Line_fuzhu_5m, "FZ3", Graphic_Operate_DEL, 6, Graphic_Color_Yellow, 2, Center_Of_Dirction_X-70, Center_Of_Dirction_Y -20, Center_Of_Dirction_X+50, Center_Of_Dirction_Y - 20 );
-            UILineDraw(&Line_fuzhu_10m, "FZ4", Graphic_Operate_DEL, 6, Graphic_Color_Yellow, 1, center_tigger_X-90, center_tigger_Y -40, center_tigger_X+90, center_tigger_Y - 40 );
-            UILineDraw(&Line_fuzhu_8m, "FZ5", Graphic_Operate_DEL, 6, Graphic_Color_Yellow, 1, center_tigger_X-80, center_tigger_Y -30, center_tigger_X+80, center_tigger_Y - 30 );
+            UILineDraw(&Line_fuzhu_5m, "FZ3", Graphic_Operate_DEL, 6, Graphic_Color_Yellow, 2, Center_Of_Dirction_X - 70, Center_Of_Dirction_Y - 20, Center_Of_Dirction_X + 50, Center_Of_Dirction_Y - 20);
+            UILineDraw(&Line_fuzhu_10m, "FZ4", Graphic_Operate_DEL, 6, Graphic_Color_Yellow, 1, center_tigger_X - 90, center_tigger_Y - 40, center_tigger_X + 90, center_tigger_Y - 40);
+            UILineDraw(&Line_fuzhu_8m, "FZ5", Graphic_Operate_DEL, 6, Graphic_Color_Yellow, 1, center_tigger_X - 80, center_tigger_Y - 30, center_tigger_X + 80, center_tigger_Y - 30);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_8m);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_10m);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_5m);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_center_2);
             UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Line_fuzhu_center_1);
+            if (UI_Now->vision_servo == snipe) {
+                UICharDraw(&Image_mode, "VSM", Graphic_Operate_DEL, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 100, char_pitch);
+                UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+                sprintf(Image_mode.show_Data, "Base");
+                UICharDraw(&Image_mode, "VSM", Graphic_Operate_ADD, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 + 400, SCREEN_WIDTH / 2 + 200, char_pitch);
+                UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+            } else if (UI_Now->vision_servo == sentry) {
+                UICharDraw(&Image_mode, "VSM", Graphic_Operate_DEL, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 100, char_pitch);
+                UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+                sprintf(Image_mode.show_Data, "Outpost");
+                UICharDraw(&Image_mode, "VSM", Graphic_Operate_ADD, 9, Graphic_Color_Green, 30, 2, SCREEN_LENGTH / 2 + 400, SCREEN_WIDTH / 2 + 200, char_pitch);
+                UICharRefresh(&referee_data_for_ui->referee_id, Image_mode);
+            }
+        }
+    }
+    if (UI_last.Angle != UI_Now->Angle) {
+        UILineDraw(&Dirction_Chassis2, "CD2", Graphic_Operate_CHANGE, 9, Graphic_Color_Pink, 2,
+                   Center_Of_Dirction_X,
+                   Center_Of_Dirction_Y, Center_Of_Dirction_X + 60 * arm_cos_f32((-UI_Now->Angle + 90) * DEGREE_2_RAD), Center_Of_Dirction_Y + 40 * arm_sin_f32(((-UI_Now->Angle + 90) * DEGREE_2_RAD)));
+        UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_Chassis2);
+    }
+    if (UI_last.shoot_mode != UI_Now->shoot_mode) {
+        if (UI_Now->shoot_mode == 1) {
+            UILineDraw(&Shoot_mode_line1, "SM1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 2, 0, 0, 0, 0);
+            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_line1);
+        } else {
+            UILineDraw(&Shoot_mode_line1, "SM1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 2, SCREEN_LENGTH / 2 - 60, SCREEN_WIDTH / 2 - 60, SCREEN_LENGTH / 2 + 60, SCREEN_WIDTH / 2 + 60);
+            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Shoot_mode_line1);
         }
     }
     if (UI_last.chassis_mode != UI_Now->chassis_mode) {
         if (UI_Now->chassis_mode == CHASSIS_FOLLOW_GIMBAL_YAW) {
             sprintf(rotate_mode.show_Data, "FOLLOW");
-            UICharDraw(&rotate_mode, "003", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH/2-200, SCREEN_WIDTH/2+100, char_pitch);
+            UICharDraw(&rotate_mode, "003", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
             UICharRefresh(&referee_data_for_ui->referee_id, rotate_mode);
         } else if (UI_Now->chassis_mode == CHASSIS_NO_FOLLOW) {
             sprintf(rotate_mode.show_Data, "FREE  ");
-            UICharDraw(&rotate_mode, "003", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH/2-200, SCREEN_WIDTH/2+100, char_pitch);
+            UICharDraw(&rotate_mode, "003", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
             UICharRefresh(&referee_data_for_ui->referee_id, rotate_mode);
         } else {
             sprintf(rotate_mode.show_Data, "ROTATE");
-            UICharDraw(&rotate_mode, "003", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH/2-200, SCREEN_WIDTH/2+100, char_pitch);
+            UICharDraw(&rotate_mode, "003", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
             UICharRefresh(&referee_data_for_ui->referee_id, rotate_mode);
         }
     }
@@ -234,17 +265,8 @@ void MyUIRefresh(void)
             UICharRefresh(&referee_data_for_ui->referee_id, HP_remain_worry);
         }
     }
-    if (UI_last.Air_ready != UI_Now->Air_ready) {
-        if (UI_Now->Air_ready == FIRE) {
-            sprintf(Load_moad.show_Data, "READY");
-            UICharDraw(&Load_moad, "005", Graphic_Operate_ADD, 9, Graphic_Color_Purplish_red, 30, 2, SCREEN_LENGTH / 2 + 200, SCREEN_WIDTH / 2 + 100, char_pitch);
-            UICharRefresh(&referee_data_for_ui->referee_id, Load_moad);
-        } else {
-            UICharDraw(&Load_moad, "005", Graphic_Operate_DEL, 9, Graphic_Color_Orange, 30, 2, 80, 700, char_pitch);
-            UICharRefresh(&referee_data_for_ui->referee_id, Load_moad);
-        }
-    }
-    UI_last=*UI_Now;
+      
+    UI_last = *UI_Now;
 }
 
 void UI_dirction_draw()
@@ -292,63 +314,63 @@ void UI_dirction_draw()
 }
 void UI_ALL_Robot_HP()
 {
-    if (referee_data_for_ui->referee_id.Robot_Color == Robot_Blue) {
-        if (init_flag == 1) {
+    // if (referee_data_for_ui->referee_id.Robot_Color == Robot_Blue) {
+    //     if (init_flag == 1) {
 
-            UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.red_1_robot_HP);
-            UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.red_2_robot_HP);
-            UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.red_3_robot_HP);
-            UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.red_4_robot_HP);
-            UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.red_5_robot_HP);
-            UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.red_7_robot_HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
-        } else {
-            UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.red_1_robot_HP);
-            UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.red_2_robot_HP);
-            UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.red_3_robot_HP);
-            UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.red_4_robot_HP);
-            UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.red_5_robot_HP);
-            UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.red_7_robot_HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
-        }
-    } else {
-        if (init_flag == 1) {
-            UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.blue_1_robot_HP);
-            UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.blue_2_robot_HP);
-            UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.blue_3_robot_HP);
-            UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.blue_4_robot_HP);
-            UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.blue_5_robot_HP);
-            UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.blue_7_robot_HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
-        } else {
-            UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.blue_1_robot_HP);
-            UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.blue_2_robot_HP);
-            UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.blue_3_robot_HP);
-            UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.blue_4_robot_HP);
-            UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.blue_5_robot_HP);
-            UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.blue_7_robot_HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
-            UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
-        }
-    }
+    //         UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.red_1_robot_HP);
+    //         UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.red_2_robot_HP);
+    //         UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.red_3_robot_HP);
+    //         UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.red_4_robot_HP);
+    //         UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.red_5_robot_HP);
+    //         UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.red_7_robot_HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
+    //     } else {
+    //         UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.red_1_robot_HP);
+    //         UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.red_2_robot_HP);
+    //         UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.red_3_robot_HP);
+    //         UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.red_4_robot_HP);
+    //         UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.red_5_robot_HP);
+    //         UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.red_7_robot_HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
+    //     }
+    // } else {
+    //     if (init_flag == 1) {
+    //         UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.blue_1_robot_HP);
+    //         UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.blue_2_robot_HP);
+    //         UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.blue_3_robot_HP);
+    //         UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.blue_4_robot_HP);
+    //         UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.blue_5_robot_HP);
+    //         UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.blue_7_robot_HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
+    //     } else {
+    //         UIIntDraw(&Robot1HP, "HP1", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 400, UI_last.All_robot_HP.blue_1_robot_HP);
+    //         UIIntDraw(&Robot2HP, "HP2", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 440, UI_last.All_robot_HP.blue_2_robot_HP);
+    //         UIIntDraw(&Robot3HP, "HP3", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 480, UI_last.All_robot_HP.blue_3_robot_HP);
+    //         UIIntDraw(&Robot4HP, "HP4", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 520, UI_last.All_robot_HP.blue_4_robot_HP);
+    //         UIIntDraw(&Robot5HP, "HP5", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 560, UI_last.All_robot_HP.blue_5_robot_HP);
+    //         UIIntDraw(&RobotsentryHP, "HP6", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 2, SCREEN_LENGTH - 340, SCREEN_WIDTH - 600, UI_last.All_robot_HP.blue_7_robot_HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP);
+    //         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, RobotsentryHP);
+    //     }
+    // }
 }
 void UIfresh_Always()
 {
-    UI_dirction_draw();
-   // UI_ALL_Robot_HP();
+    // UI_dirction_draw();
+    // UI_ALL_Robot_HP();
     if (init_flag == 1) {
         UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_last.CapVot * 1000);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, CAP_power);
-        UIFloatDraw(&Pitch_angle, "pid", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 0, 2, Pitch_angle_X , Pitch_angle_Y , UI_last.pitch_data * 1000);
+        UIFloatDraw(&Pitch_angle, "pid", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 20, 0, 2, Pitch_angle_X + 200, Pitch_angle_Y, UI_last.pitch_data * 1000);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Pitch_angle);
         init_flag = 0;
     } else {
-        UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 , UI_last.CapVot * 1000);
+        UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_last.CapVot * 1000);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, CAP_power);
-        UIFloatDraw(&Pitch_angle, "pid", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 0, 2, Pitch_angle_X , Pitch_angle_Y , UI_last.pitch_data * 1000);
+        UIFloatDraw(&Pitch_angle, "pid", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 20, 0, 2, Pitch_angle_X + 200, Pitch_angle_Y, UI_last.pitch_data * 1000);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Pitch_angle);
     }
 }

@@ -262,6 +262,7 @@ void GimbalTask()
         case SIGHT_OFF:
             Servo_Motor_FreeAngle_Set(sight_module, 80);
             break;
+            
     }
 
     switch (gimbal_cmd_recv.image_mode) {
@@ -271,6 +272,8 @@ void GimbalTask()
         case snipe:
             Servo_Motor_FreeAngle_Set(image_module, 104);
             break;
+        case sentry:
+            Servo_Motor_FreeAngle_Set(image_module, 117);
     }
 
     switch (gimbal_cmd_recv.gimbal_mode) {

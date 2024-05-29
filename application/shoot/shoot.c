@@ -71,6 +71,7 @@ One_shoot_control NOW_MODE = {LOAD, 1};
 static int16_t tick_num1 = 0, tick_num2 = 0;
 static int8_t One_Shoot_flag, Last_Air_Mode;
 static int8_t Loader_flag = 1;
+static int8_t block_push;
 void One_Shoot_Task()
 {
     if (NOW_MODE.now_step == LOAD) {
@@ -80,7 +81,7 @@ void One_Shoot_Task()
             // DJIMotorSetRef(loader, loader->measure.total_angle - ONE_BULLET_DELTA_ANGLE );
             DJIMotorEnable(loader);
             DJIMotorOuterLoop(loader, SPEED_LOOP);
-            DJIMotorSetRef(loader, 4000);
+            DJIMotorSetRef(loader, 6000);
             Loader_flag = 0;
         }
         if (photogate_state == 1) {
@@ -100,9 +101,17 @@ void One_Shoot_Task()
         }
     }
     if (NOW_MODE.now_step == PUSH) {
+        DJIMotorEnable(loader);
+        DJIMotorOuterLoop(loader, SPEED_LOOP);
+        DJIMotorSetRef(loader, 6000);
+        osDelay(200);
+        DJIMotorSetRef(loader, -4000);
+        osDelay(200);
         HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
         NOW_MODE.now_step = FIRE;
-        osDelay(100);
+        osDelay(200);
+        DJIMotorSetRef(loader, 0);
+        DJIMotorStop(loader);
     }
     if (NOW_MODE.now_step == FIRE) {
         if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_14) == GPIO_PIN_RESET) {
@@ -128,9 +137,9 @@ static float Last_verb_Of_load;
 void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
 {
     if (
-        fabs(Now_verb_Of_load) <= (loader)->motor_controller.pid_ref / 400 && (loader)->motor_controller.pid_ref != 0) {
+        fabs(Now_verb_Of_load) <= (loader)->motor_controller.pid_ref / 200 && (loader)->motor_controller.pid_ref != 0) {
         tick_block++;
-        if (tick_block >= 200) {
+        if (tick_block >= 30) {
             block_flag = 1;
         } else {
             block_flag = 0;
@@ -152,26 +161,30 @@ void ShootTask()
 #ifdef GIMBAL_BROAD
 // 在robot.c可以获得值
 #endif // DEBUG
-    block_shook_check((loader)->measure.speed_aps);
-    if (block_flag == 1) {
-        DJIMotorEnable(loader);
-        DJIMotorOuterLoop(loader, SPEED_LOOP);
-        DJIMotorSetRef(loader, 2000);
-        DWT_Delay(0.1);
-        DJIMotorSetRef(loader, 0);
-        block_flag = 0;
+    if (shoot_cmd_recv.Shoot_power == POWER_ON) {
+        block_shook_check((loader)->measure.speed_aps);
+        if (block_flag == 1) {
+            DJIMotorEnable(loader);
+            DJIMotorOuterLoop(loader, SPEED_LOOP);
+            DJIMotorSetRef(loader, -4000);
+            osDelay(200);
+            DJIMotorSetRef(loader,0);
+            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
+            NOW_MODE.now_step = FIRE;
+            osDelay(100);
+        }
+        if (Last_Air_Mode != shoot_cmd_recv.air_pump_mode && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON) { One_Shoot_flag = 1; }
+        Last_Air_Mode   = shoot_cmd_recv.air_pump_mode;
+        photogate_state = HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_6);
+        if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
+            DJIMotorStop(loader);
+            HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+        } else {
+            One_Shoot_Task();
+        }
+        shoot_feedback_data.bullet_ready = NOW_MODE.now_step;
     }
-    if (Last_Air_Mode != shoot_cmd_recv.air_pump_mode && shoot_cmd_recv.air_pump_mode == AIR_PUMP_ON) { One_Shoot_flag = 1; }
-    Last_Air_Mode   = shoot_cmd_recv.air_pump_mode;
-    photogate_state = HAL_GPIO_ReadPin(GPIOI, GPIO_PIN_6);
-    if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
-        DJIMotorStop(loader);
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-    } else {
-        One_Shoot_Task();
-    }
-    shoot_feedback_data.bullet_ready = NOW_MODE.now_step;
 #ifdef ONE_BOARD
     PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
 #endif // DEBUG

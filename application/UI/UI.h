@@ -17,6 +17,8 @@ typedef struct
     ext_game_robot_HP_t All_robot_HP;
     float CapVot;
     Shoot_Step Air_ready;
+    Servo_Motor_mode_e vision_servo;
+    int16_t outpost_HP;
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;
 extern Graph_Data_t line_fuzhu_two;

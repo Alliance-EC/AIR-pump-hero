@@ -31,15 +31,15 @@
 #define Graphic_Color_White 8			//白色
 
 //Other
-#define Center_Of_Dirction_X (1300)
-#define Center_Of_Dirction_Y (200)
+#define Center_Of_Dirction_X (SCREEN_LENGTH/2+100)
+#define Center_Of_Dirction_Y (SCREEN_WIDTH/2-80)
 #define Len_Dirction (40)
 
 #define Pitch_angle_X (SCREEN_LENGTH/2+10)
 #define Pitch_angle_Y (SCREEN_WIDTH/2)
 #define Radius_Pitch 80
 
-#define center_tigger_X (SCREEN_LENGTH/2-50)
-#define center_tigger_Y (SCREEN_WIDTH/2-50)
+#define center_tigger_X (SCREEN_LENGTH/2-30)
+#define center_tigger_Y (SCREEN_WIDTH/2-40)
 
 #endif
