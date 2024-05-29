@@ -30,4 +30,16 @@
 #define Graphic_Color_Black 7			//黑色
 #define Graphic_Color_White 8			//白色
 
+//Other
+#define Center_Of_Dirction_X (1300)
+#define Center_Of_Dirction_Y (200)
+#define Len_Dirction (40)
+
+#define Pitch_angle_X 1300
+#define Pitch_angle_Y 400
+#define Radius_Pitch 80
+
+#define center_tigger_X (SCREEN_LENGTH/2-5)
+#define center_tigger_Y (SCREEN_WIDTH/2-50)
+
 #endif
