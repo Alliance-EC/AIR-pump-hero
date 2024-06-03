@@ -8,24 +8,15 @@ typedef struct
 {
     int remain_HP;
     int Max_HP;
-<<<<<<< HEAD
-    uint8_t shoot_mode;
-=======
-    uint8_t fir_mode;
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
+    friction_mode_e fri_mode;
     chassis_mode_e chassis_mode;
     float pitch_data;
     uint8_t load_Mode;
     float Angle;
-<<<<<<< HEAD
     uint8_t Bullet_ready;
     ext_game_robot_HP_t All_robot_HP;
     float CapVot;
     //Shoot_Step Air_ready;
-=======
-    ext_game_robot_HP_t All_robot_HP;
-    float CapVot;
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;
 extern Graph_Data_t line_fuzhu_two;

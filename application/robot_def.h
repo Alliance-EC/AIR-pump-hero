@@ -17,13 +17,8 @@
 #include "stdint.h"
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // 单板控制整车
-<<<<<<< HEAD
 #define CHASSIS_BOARD //底盘板 
 // #define GIMBAL_BOARD  //云台板  
-=======
-   //   #define CHASSIS_BOARD //底盘板
-     #define GIMBAL_BOARD  //云台板
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 #define TESTCODE
 #define VISION_USE_VCP // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
@@ -43,11 +38,7 @@
 #define ONE_BULLET_DELTA_ANGLE 70    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
 #define REDUCTION_RATIO_LOADER 49.0f // 拨盘电机的减速比,英雄需要修改为3508的19.0f
 #define NUM_PER_CIRCLE         10    // 拨盘一圈的装载量
-<<<<<<< HEAD
 #define Target_bullet_speed    15.7
-=======
-#define Target_bullet_speed    15.8  // 目标弹速
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 // 机器人底盘修改的参数,单位为mm(毫米)
 #define WHEEL_BASE             630    // 纵向轴距(前进后退方向)
 #define TRACK_WIDTH            462    // 横向轮距(左右平移方向)
@@ -55,7 +46,8 @@
 #define CENTER_GIMBAL_OFFSET_Y 0     // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0
 #define RADIUS_WHEEL           76.25f    // 轮子半径
 #define REDUCTION_RATIO_WHEEL  19.2f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换
-
+#define CHASSIS_MAX_SPEED 15000  //键鼠下的最大速度
+#define PRE_SPEED_UP 2000 //每次增加的速度
 // 陀螺仪校准数据，开启陀螺仪校准后可从INS中获取
 #define BMI088_PRE_CALI_GYRO_X_OFFSET -0.00260018627
 #define BMI088_PRE_CALI_GYRO_Y_OFFSET 0.00221270346     
@@ -112,7 +104,6 @@ typedef enum {
 // 云台模式设置
 typedef enum {
     GIMBAL_ZERO_FORCE = 0, // 电流零输入
-    GIMBAL_FREE_MODE,      // 云台自由运动模式,即与底盘分离(底盘此时应为NO_FOLLOW)反馈值为电机total_angle;似乎可以改为全部用IMU数据?
     GIMBAL_GYRO_MODE,      // 云台陀螺仪反馈模式,反馈值为陀螺仪pitch,total_yaw_angle,底盘可以为小陀螺和跟随模式
 } gimbal_mode_e;
 
@@ -132,14 +123,6 @@ typedef enum {
 } lid_mode_e;
 
 
-<<<<<<< HEAD
-typedef enum {
-    SIGHT_OFF = 0, 
-    SIGHT_ON,   //瞄准镜打开    
-} sight_mode_e;
-
-=======
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 typedef enum {
     SIGHT_OFF = 0, 
     SIGHT_ON,   //瞄准镜打开    
@@ -147,11 +130,8 @@ typedef enum {
 
    typedef enum {
     LOAD_STOP = 0,  // 停止发射
-    LOAD_MODE,   // 反转
+    LOAD_MODE,   // 装弹模式    
     LOAD_1_BULLET,  // 单发
-    LOAD_3_BULLET,  // 三发
-    LOAD_BURSTFIRE, // 连发
-    FULL_LOAD,
 } loader_mode_e;
 
 typedef enum {
@@ -188,6 +168,7 @@ typedef struct
 { // 云台角度控制
     float yaw;
     float pitch;
+    uint8_t Gimbal_power;
     gimbal_mode_e gimbal_mode;
     Servo_Motor_mode_e image_mode;
     sight_mode_e sight_mode;
@@ -201,11 +182,8 @@ typedef struct
     loader_mode_e load_mode;
     lid_mode_e lid_mode;
     friction_mode_e friction_mode;
-<<<<<<< HEAD
-=======
-    float bullet_speed;
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     uint8_t rest_heat;
+    uint8_t Shoot_power;
 } Shoot_Ctrl_Cmd_s;
 
 /* ----------------gimbal/shoot/chassis发布的反馈数据----------------*/
@@ -235,7 +213,7 @@ typedef struct
 
 typedef struct
 {
-    uint16_t Pitch_data;
+    float Pitch_data;
     float yaw_motor_single_round_angle;
 } Gimbal_Upload_Data_s;
 

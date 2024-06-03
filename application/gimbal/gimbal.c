@@ -38,8 +38,7 @@ static void GimbalInputGet()
         pitch_input = PITCH_MAX_ANGLE;
     if (pitch_input < PITCH_MIN_ANGLE)
         pitch_input = PITCH_MIN_ANGLE;
-<<<<<<< HEAD
-    while (-yaw_input - 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle)//过圈处理
+    while (-yaw_input - 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle) // 过圈处理
         yaw_input += 2 * 3.141592654;
     while (-yaw_input + 2 * 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle)
         yaw_input -= 2 * 3.141592654;
@@ -48,8 +47,6 @@ static void GimbalInputGet()
     } else if (-yaw_input + 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle && -yaw_input + 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle) {
         yaw_input -= 2 * 3.141592654;
     }
-=======
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 }
 // 供robot.c调用的外部接口
 void GimbalInit()
@@ -64,7 +61,7 @@ void GimbalInit()
         .Channel          = TIM_CHANNEL_2,
         .htim             = &htim1,
         .Servo_Angle_Type = Free_Angle_mode,
-        .Servo_type       = Servo180    ,
+        .Servo_type       = Servo180,
     };
     image_module                = ServoInit(&servo_vision_config);
     sight_module                = ServoInit(&servo_sight_config);
@@ -199,99 +196,71 @@ void GimbalInit()
 /* 机器人云台控制核心任务,后续考虑只保留IMU控制,不再需要电机的反馈 */
 void GimbalTask()
 {
-    // 获取云台控制数据
-    // 后续增加未收到数据的处理
+    if (gimbal_cmd_recv.Gimbal_power) {//云台上电才会施行该任务
 #ifdef ONEBROAD
-    SubGetMessage(gimbal_sub, &gimbal_cmd_recv);
+        SubGetMessage(gimbal_sub, &gimbal_cmd_recv);
 #endif // DEBUG
 #ifdef GIMBAL_BOARD
-    // 从robot中即可获得gimbal_cmd_recv
+        // 从robot中即可获得gimbal_cmd_recv
 #endif // DEBUG
 
-    // @todo:现在已不再需要电机反馈,实际上可以始终使用IMU的姿态数据来作为云台的反馈,yaw电机的offset只是用来跟随底盘
-    // 根据控制模式进行电机反馈切换和过渡,视觉模式在robot_cmd模块就已经设置好,gimbal只看yaw_ref和pitch_ref
 
-<<<<<<< HEAD
-    // switch (gimbal_cmd_recv.sight_mode) {
-    //     case SIGHT_ON:
-    //         Servo_Motor_FreeAngle_Set(sight_module, 40);
-    //         break;
-    //     case SIGHT_OFF:
-    //         Servo_Motor_FreeAngle_Set(sight_module,200);
-    //         break;
-    // }
+        switch (gimbal_cmd_recv.sight_mode) {
+            case SIGHT_ON:
+                Servo_Motor_FreeAngle_Set(sight_module, 40);
+                break;
+            case SIGHT_OFF:
+                Servo_Motor_FreeAngle_Set(sight_module, 200);
+                break;
+        } // 望远镜舵机控制
 
-    switch (gimbal_cmd_recv.image_mode) {
-        case Follow_shoot:
-    Servo_Motor_FreeAngle_Set(image_module,34);
-=======
-    switch (gimbal_cmd_recv.sight_mode) {
-        case SIGHT_ON:
-            Servo_Motor_FreeAngle_Set(sight_module, 40);
-            break;
-        case SIGHT_OFF:
-            Servo_Motor_FreeAngle_Set(sight_module,180);
-            break;
-    }
+        switch (gimbal_cmd_recv.image_mode) {
+            case Follow_shoot:
+                Servo_Motor_FreeAngle_Set(image_module, 34);
+                break;
+            case snipe:
+                Servo_Motor_FreeAngle_Set(image_module, 41 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);
+                break;
+        } // 图传舵机控制
 
-    switch (gimbal_cmd_recv.image_mode) {
-        case Follow_shoot:
-            Servo_Motor_FreeAngle_Set(image_module, 34);
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
-            break;
-        case snipe:
-            Servo_Motor_FreeAngle_Set(image_module, 41 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);
-            break;
-    }
+        switch (gimbal_cmd_recv.gimbal_mode) {
+            // 停止
+            case GIMBAL_ZERO_FORCE:
+                DJIMotorStop(yaw_motor);
+                DJIMotorStop(pitch_motor);
+                break;
+            case GIMBAL_GYRO_MODE:
+                GimbalInputGet();
+                DJIMotorEnable(yaw_motor);
+                DJIMotorEnable(pitch_motor);
+                DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
+                DJIMotorChangeFeed(yaw_motor, SPEED_LOOP, OTHER_FEED);
+                DJIMotorChangeFeed(pitch_motor, ANGLE_LOOP, OTHER_FEED);
+                DJIMotorChangeFeed(pitch_motor, SPEED_LOOP, OTHER_FEED);
+                DJIMotorSetRef(yaw_motor, yaw_input);
+                DJIMotorSetRef(pitch_motor, pitch_input);
+                break;
+            default:
+                break;
+        }
 
-    GimbalInputGet();
-    switch (gimbal_cmd_recv.gimbal_mode) {
-        // 停止
-        case GIMBAL_ZERO_FORCE:
-            DJIMotorStop(yaw_motor);
-            DJIMotorStop(pitch_motor);
-            break;
-        // 使用陀螺仪的反馈,底盘根据yaw电机的offset跟随云台或视觉模式采用
-        case GIMBAL_GYRO_MODE: // 后续只保留此模式
-            DJIMotorEnable(yaw_motor);
-            DJIMotorEnable(pitch_motor);
-            DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
-            DJIMotorChangeFeed(yaw_motor, SPEED_LOOP, OTHER_FEED);
-            DJIMotorChangeFeed(pitch_motor, ANGLE_LOOP, OTHER_FEED);
-            DJIMotorChangeFeed(pitch_motor, SPEED_LOOP, OTHER_FEED);
-            // DJIMotorStop(pitch_motor);
-            DJIMotorSetRef(yaw_motor, yaw_input); // yaw和pitch会在robot_cmd中处理好多圈和单圈
-            DJIMotorSetRef(pitch_motor, pitch_input);
-            break;
-        // 云台自由模式,使用编码器反馈,底盘和云台分离,仅云台旋转,一般用于调整云台姿态(英雄吊射等)/能量机关
-        case GIMBAL_FREE_MODE: // 后续删除,或加入云台追地盘的跟随模式(响应速度更快)
-            DJIMotorEnable(yaw_motor);
-            DJIMotorEnable(pitch_motor);
-            DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
-            DJIMotorChangeFeed(yaw_motor, SPEED_LOOP, OTHER_FEED);
-            DJIMotorChangeFeed(pitch_motor, ANGLE_LOOP, OTHER_FEED);
-            DJIMotorChangeFeed(pitch_motor, SPEED_LOOP, OTHER_FEED);
-            // DJIMotorStop(pitch_motor);
-            DJIMotorSetRef(yaw_motor, yaw_input); // yaw和pitch会在robot_cmd中处理好多圈和单圈
-            DJIMotorSetRef(pitch_motor, pitch_input);
-            break;
-        default:
-            break;
-    }
+        // 在合适的地方添加pitch重力补偿前馈力矩
+        // 根据IMU姿态/pitch电机角度反馈计算出当前配重下的重力矩
+        // ...
 
-    // 在合适的地方添加pitch重力补偿前馈力矩
-    // 根据IMU姿态/pitch电机角度反馈计算出当前配重下的重力矩
-    // ...
-
-    // 设置反馈数据,主要是imu和yaw的ecd
-    // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
-    gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
-    gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
-    // 推送消息
+        // 设置反馈数据,主要是imu和yaw的ecd
+        // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
+        gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
+        gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
+        // 推送消息
 #ifdef ONE_BROAD
-    PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
+        PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
 #endif // DEBUG
 #ifdef GIMBAL_BOARD
 
 #endif // DEBUG
+    } else {
+        DJIMotorStop(yaw_motor);
+        DJIMotorStop(pitch_motor);
+    }
 }

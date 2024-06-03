@@ -35,24 +35,16 @@
 #include "ins_task.h"
 CANCommInstance *chassis_can_comm; // 双板通信CAN comm
 static INS_Instance *Chassis_IMU_data;
-<<<<<<< HEAD
-#endif                                      // CHASSIS_BOARD
-static Publisher_t *chassis_pub;            // 用于发布底盘的数据
-static Subscriber_t *chassis_sub;           // 用于订阅底盘的控制命令                                        // !ONE_BOARD
-static Chassis_Ctrl_Cmd_s chassis_cmd_recv; // 底盘接收到的控制命令
-== == == =
 #endif                                              // CHASSIS_BOARD
-             static Publisher_t * chassis_pub;      // 用于发布底盘的数据
+static Publisher_t *chassis_pub;                    // 用于发布底盘的数据
 static Subscriber_t *chassis_sub;                   // 用于订阅底盘的控制命令                                        // !ONE_BOARD
 static Chassis_Ctrl_Cmd_s chassis_cmd_recv;         // 底盘接收到的控制命令
->>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数据
 static Publisher_t *referee_pub;
-static Publisher_t *Cap_pub;
-referee_info_t *referee_data; // 用于获取裁判系统的数据
-
-SuperCapInstance *cap;                                       // 超级电容
-DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
+static referee_info_t *referee_data; // 用于获取裁判系统的数据
+static Publisher_t *CAP_PUB;
+static SuperCapInstance *cap;                                              // 超级电容
+static DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 // static Chassis_Power_Data_s chassis_power_data;
 
 /* 用于自旋变速策略的时间变量 */
@@ -61,8 +53,6 @@ DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forwa
 /* 私有函数计算的中介变量,设为静态避免参数传递的开销 */
 static float chassis_vx, chassis_vy;     // 将云台系的速度投影到底盘
 static float vt_lf, vt_rf, vt_lb, vt_rb; // 底盘速度解算后的临时输出,待进行限幅
-static float F_Of_chassis;               // 小陀螺旋转频率；
-static uint8_t signal_of_chassis;        // 小陀螺旋转标志符
 extern uint8_t Super_flag;
 
 void ChassisInit()
@@ -142,7 +132,7 @@ void ChassisInit()
     chassis_sub = SubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
     chassis_pub = PubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
     referee_pub = PubRegister("referee_data", sizeof(referee_info_t));
-    Cap_pub     = PubRegister("cap_data", sizeof(SuperCapInstance));
+    CAP_PUB     = PubRegister("cap_data", sizeof(SuperCapInstance));
     PubPushMessage(referee_pub, (void *)referee_data);
 }
 
@@ -222,7 +212,6 @@ static void EstimateSpeed()
     // chassis_feedback_data.vx vy wz =
     //  ...
 }
-uint8_t UIflag = 1;
 uint8_t Super_Allow_Flag;
 int time_delay, time_delay1, time_delay2;
 void Super_Cap_control()
@@ -363,12 +352,7 @@ void ChassisTask()
         SuperCapSend(cap, (uint8_t *)&cap->cap_msg_g);
         // 推送反馈消息
         PubPushMessage(referee_pub, (void *)referee_data);
-        PubPushMessage(Cap_pub, (void *)cap);
-        if (referee_data->GameRobotState.robot_id != 0 && UIflag == 1) {
-            get_referee_data(referee_data);
-            MyUIInit();
-            UIflag = 0;
-        }
+        PubPushMessage(CAP_PUB, (void *)cap);
 #ifdef CHASSIS_BOARD
 
 #endif // DEBUG
