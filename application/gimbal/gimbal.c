@@ -38,6 +38,7 @@ static void GimbalInputGet()
         pitch_input = PITCH_MAX_ANGLE;
     if (pitch_input < PITCH_MIN_ANGLE)
         pitch_input = PITCH_MIN_ANGLE;
+<<<<<<< HEAD
     while (-yaw_input - 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle)//过圈处理
         yaw_input += 2 * 3.141592654;
     while (-yaw_input + 2 * 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle)
@@ -47,6 +48,8 @@ static void GimbalInputGet()
     } else if (-yaw_input + 3.141592654 < gimbal_IMU_data->output.Yaw_total_angle && -yaw_input + 2 * 3.141592654 > gimbal_IMU_data->output.Yaw_total_angle) {
         yaw_input -= 2 * 3.141592654;
     }
+=======
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 }
 // 供robot.c调用的外部接口
 void GimbalInit()
@@ -208,6 +211,7 @@ void GimbalTask()
     // @todo:现在已不再需要电机反馈,实际上可以始终使用IMU的姿态数据来作为云台的反馈,yaw电机的offset只是用来跟随底盘
     // 根据控制模式进行电机反馈切换和过渡,视觉模式在robot_cmd模块就已经设置好,gimbal只看yaw_ref和pitch_ref
 
+<<<<<<< HEAD
     // switch (gimbal_cmd_recv.sight_mode) {
     //     case SIGHT_ON:
     //         Servo_Motor_FreeAngle_Set(sight_module, 40);
@@ -220,6 +224,20 @@ void GimbalTask()
     switch (gimbal_cmd_recv.image_mode) {
         case Follow_shoot:
     Servo_Motor_FreeAngle_Set(image_module,34);
+=======
+    switch (gimbal_cmd_recv.sight_mode) {
+        case SIGHT_ON:
+            Servo_Motor_FreeAngle_Set(sight_module, 40);
+            break;
+        case SIGHT_OFF:
+            Servo_Motor_FreeAngle_Set(sight_module,180);
+            break;
+    }
+
+    switch (gimbal_cmd_recv.image_mode) {
+        case Follow_shoot:
+            Servo_Motor_FreeAngle_Set(image_module, 34);
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
             break;
         case snipe:
             Servo_Motor_FreeAngle_Set(image_module, 41 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);

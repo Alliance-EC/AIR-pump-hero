@@ -51,8 +51,12 @@ static Shoot_Upload_Data_s shoot_fetch_data; // 从发射获取的反馈信息
 static Robot_Status_e robot_state; // 机器人整体工作状态
 static Subscriber_t *Referee_Data_For_UI;
 static Subscriber_t *Cap_data_For_UI;
+<<<<<<< HEAD
 extern SuperCapInstance *cap;
 static referee_info_t referee_data;
+=======
+static SuperCapInstance Cap;
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 void RobotCMDInit()
 {
     rc_data          = RemoteControlInit(&huart3); // 修改为对应串口,注意如果是自研板dbus协议串口需选用添加了反相器的那个 // 遥控器在底盘上 v v c
@@ -63,7 +67,11 @@ void RobotCMDInit()
     shoot_cmd_pub       = PubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
     shoot_feed_sub      = SubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
     Referee_Data_For_UI = SubRegister("referee_data", sizeof(referee_info_t));
+<<<<<<< HEAD
     Cap_data_For_UI     = SubRegister("cap_data", sizeof(SuperCapInstance));
+=======
+    Cap_data_For_UI = SubRegister("cap_data",sizeof(SuperCapInstance));
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     // #ifdef ONE_BOARD // 双板兼容
     chassis_cmd_pub  = PubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
@@ -121,9 +129,15 @@ static void MouseKeySet()
         shoot_cmd_send.load_mode      = LOAD_STOP;
     }
     gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
+<<<<<<< HEAD
     chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 15000 - rc_data[TEMP].key[KEY_PRESS].s * 15000; // 系数待测
     chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 15000 - rc_data[TEMP].key[KEY_PRESS].d * 15000;
     // chassis_cmd_send.vy*=referee_data.GameRobotState.chassis_power_limit/70;
+=======
+    chassis_cmd_send.vy         = rc_data[TEMP].key[KEY_PRESS].w * 80000 - rc_data[TEMP].key[KEY_PRESS].s * 80000; // 系数待测
+    chassis_cmd_send.vx         = rc_data[TEMP].key[KEY_PRESS].a * 80000 - rc_data[TEMP].key[KEY_PRESS].d * 80000;
+
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 1; // 系数待测
     gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 20;
     if (rc_data[TEMP].key_count[KEY_PRESS][Key_B] % 2 == 1) {
@@ -323,17 +337,27 @@ static void RemoteControlSet()
 
 void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 {
+<<<<<<< HEAD
     UI_data.Bullet_ready = shoot_fetch_data.Bullet_ready;
     UI_data.All_robot_HP = referee_data.GameRobotHP;
     UI_data.pitch_data   = gimbal_fetch_data.Pitch_data;
     UI_data.shoot_mode   = shoot_cmd_send.friction_mode;
+=======
+    UI_data.All_robot_HP = referee_data.GameRobotHP;
+    UI_data.pitch_data   = gimbal_fetch_data.Pitch_data;
+    UI_data.fir_mode     = shoot_cmd_send.friction_mode;
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     UI_data.chassis_mode = chassis_cmd_send.chassis_mode;
     UI_data.remain_HP    = referee_data.GameRobotState.remain_HP;
     UI_data.load_Mode    = One_shoot_flag;
     UI_data.Max_HP       = referee_data.GameRobotState.max_HP;
     UI_data.Angle        = chassis_cmd_send.offset_angle;
+<<<<<<< HEAD
     UI_data.CapVot       = cap->cap_msg_s.CapVot;
     // UI_data.Air_ready    = shoot_fetch_data.bullet_ready;
+=======
+    UI_data.CapVot = Cap.cap_msg_s.CapVot;
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 }
 extern DJIMotorInstance *motor_lf;
 extern Power_Data_s power_data;
@@ -350,13 +374,19 @@ void RobotCMDTask()
     gimbal_fetch_data = data_from_upboard.Gimbal_data;
 #endif // DEBUG
     SubGetMessage(chassis_feed_sub, (void *)&chassis_fetch_data);
+<<<<<<< HEAD
     SubGetMessage(Referee_Data_For_UI, (void *)&referee_data);
     //     SubGetMessage(Cap_data_For_UI,(void *)&Cap);
+=======
+    SubGetMessage(Referee_Data_For_UI,(void *) &referee_data);
+    SubGetMessage(Cap_data_For_UI,(void *)&Cap);
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     CalcOffsetAngle();
     if ((switch_is_mid(rc_data[TEMP].rc.switch_left)) && (switch_is_up(rc_data[TEMP].rc.switch_right))) {
         MouseKeySet();
     } else
         RemoteControlSet();
+<<<<<<< HEAD
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
 
@@ -372,6 +402,19 @@ void RobotCMDTask()
     }
 #endif // DEBUG
 
+=======
+    shoot_cmd_send.bullet_speed = referee_data.ShootData.bullet_speed;
+
+    PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
+    Get_UI_Data();
+
+#ifdef CHASSIS_BOARD
+    chassis_send_data_ToUpboard.gimbal_cmd_upload = gimbal_cmd_send;
+    chassis_send_data_ToUpboard.shoot_cmd_upload  = shoot_cmd_send;
+    CANCommSend(chassis_can_comm, (void *)&chassis_send_data_ToUpboard);
+#endif // DEBUG
+
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 #ifdef ONE_BOARD
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     PubPushMessage(shoot_cmd_pub, (void *)&shoot_cmd_send);
@@ -385,10 +428,18 @@ void UItask(void *argument)
     /* USER CODE BEGIN UItask */
     /* Infinite loop */
     for (;;) {
+<<<<<<< HEAD
         check_to_change_UI(&UI_data);
         MyUIRefresh();
         UIfresh_Always();
         osDelay(40);
+=======
+        if (check_to_change_UI(&UI_data) == 1) {
+            MyUIRefresh();
+        }
+        UIfresh_Always();
+        osDelay(10);
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     }
     /* USER CODE END UItask */
 }

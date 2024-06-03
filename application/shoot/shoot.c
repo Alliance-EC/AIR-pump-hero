@@ -120,7 +120,11 @@ void ShootInit()
 }
 static float Last_verb_Of_load;
 static uint8_t block_flag = 0;
+<<<<<<< HEAD
 static int friction_speed=35600;
+=======
+static int friction_speed=35000;
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
 {
     if (
@@ -131,6 +135,7 @@ void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
     Last_verb_Of_load = Now_verb_Of_load;
 }
 static float last_bullet_speed;
+<<<<<<< HEAD
 
 // void Get_New_friction_speed(int Now_bullet_speed)                                                                                                                                                                                                                                                
 // {
@@ -140,6 +145,15 @@ static float last_bullet_speed;
 //     }
 // }
 
+=======
+void Get_New_friction_speed(int Now_bullet_speed)
+{
+    if(Now_bullet_speed>14.5)
+    {
+        friction_speed+=(Target_bullet_speed-Now_bullet_speed)*100.0f  ;
+    }
+}
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 
 /* 机器人发射机构控制核心任务 */
 void ShootTask()
@@ -190,7 +204,7 @@ void ShootTask()
             } else {
                 DJIMotorSetRef(loader, 0);
             }
-            
+
             break;
         // 三连发,如果不需要后续可能删除
         case LOAD_3_BULLET:
@@ -223,10 +237,20 @@ void ShootTask()
                 ; // 未知模式,停止运行,检查指针越界,题
     }
 #endif
+<<<<<<< HEAD
     // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)  
     if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
                 DJIMotorSetRef(friction_l, friction_speed);
                 DJIMotorSetRef(friction_r, friction_speed);
+=======
+    // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)
+    if(shoot_cmd_recv.bullet_speed!=last_bullet_speed)
+    Get_New_friction_speed(shoot_cmd_recv.bullet_speed);
+    last_bullet_speed=shoot_cmd_recv.bullet_speed;
+    if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+        DJIMotorSetRef(friction_l, friction_speed);
+        DJIMotorSetRef(friction_r, friction_speed);
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     } else // 关闭摩擦轮
     {
         DJIMotorSetRef(friction_l, 0);

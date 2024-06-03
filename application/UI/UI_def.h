@@ -31,6 +31,7 @@
 #define Graphic_Color_White 8			//白色
 
 //Other
+<<<<<<< HEAD
 #define Center_Of_Dirction_X (1300)
 #define Center_Of_Dirction_Y (200)
 #define Len_Dirction (40)
@@ -41,5 +42,15 @@
 
 #define center_tigger_X (SCREEN_LENGTH/2-5)
 #define center_tigger_Y (SCREEN_WIDTH/2-50)
+=======
+#define Center_Of_Dirction_X (300)
+#define Center_Of_Dirction_Y (300)
+#define Len_Dirction (70)
+
+#define Pitch_angle_X 300
+#define Pitch_angle_Y 600
+#define Radius_Pitch 80
+
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 
 #endif

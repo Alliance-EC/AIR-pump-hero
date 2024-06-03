@@ -17,8 +17,13 @@
 #include "stdint.h"
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // 单板控制整车
+<<<<<<< HEAD
 #define CHASSIS_BOARD //底盘板 
 // #define GIMBAL_BOARD  //云台板  
+=======
+   //   #define CHASSIS_BOARD //底盘板
+     #define GIMBAL_BOARD  //云台板
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 #define TESTCODE
 #define VISION_USE_VCP // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
@@ -38,7 +43,11 @@
 #define ONE_BULLET_DELTA_ANGLE 70    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
 #define REDUCTION_RATIO_LOADER 49.0f // 拨盘电机的减速比,英雄需要修改为3508的19.0f
 #define NUM_PER_CIRCLE         10    // 拨盘一圈的装载量
+<<<<<<< HEAD
 #define Target_bullet_speed    15.7
+=======
+#define Target_bullet_speed    15.8  // 目标弹速
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 // 机器人底盘修改的参数,单位为mm(毫米)
 #define WHEEL_BASE             630    // 纵向轴距(前进后退方向)
 #define TRACK_WIDTH            462    // 横向轮距(左右平移方向)
@@ -123,12 +132,20 @@ typedef enum {
 } lid_mode_e;
 
 
+<<<<<<< HEAD
 typedef enum {
     SIGHT_OFF = 0, 
     SIGHT_ON,   //瞄准镜打开    
 } sight_mode_e;
 
+=======
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
 typedef enum {
+    SIGHT_OFF = 0, 
+    SIGHT_ON,   //瞄准镜打开    
+} sight_mode_e;
+
+   typedef enum {
     LOAD_STOP = 0,  // 停止发射
     LOAD_MODE,   // 反转
     LOAD_1_BULLET,  // 单发
@@ -184,6 +201,10 @@ typedef struct
     loader_mode_e load_mode;
     lid_mode_e lid_mode;
     friction_mode_e friction_mode;
+<<<<<<< HEAD
+=======
+    float bullet_speed;
+>>>>>>> 82775a6cbbda179c12e42b923b2e54f64f9d7f72
     uint8_t rest_heat;
 } Shoot_Ctrl_Cmd_s;
 
