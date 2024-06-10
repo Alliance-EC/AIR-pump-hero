@@ -133,6 +133,7 @@ PIDInstance *PIDRegister(PID_Init_Config_s *config)
     pid->Kp          = config->Kp;
     pid->Ki          = config->Ki;
     pid->Kd          = config->Kd;
+    pid->Kf          = config->Kf;
     pid->MaxOut      = config->MaxOut;
     pid->DeadBand    = config->DeadBand;
 
@@ -171,7 +172,7 @@ float PIDCalculate(PIDInstance *pid, float measure, float ref)
         pid->Pout  = pid->Kp * pid->Err;
         pid->ITerm = pid->Ki * pid->Err * pid->dt;
         pid->Dout  = pid->Kd * (pid->Err - pid->Last_Err) / pid->dt;
-
+        pid->Fout  = pid->Kf * pid->FFError;
         // 梯形积分
         if (pid->Improve & PID_Trapezoid_Intergral)
             f_Trapezoid_Intergral(pid);
@@ -188,8 +189,8 @@ float PIDCalculate(PIDInstance *pid, float measure, float ref)
         if (pid->Improve & PID_Integral_Limit)
             f_Integral_Limit(pid);
 
-        pid->Iout += pid->ITerm;                         // 累加积分
-        pid->Output = pid->Pout + pid->Iout + pid->Dout; // 计算输出
+        pid->Iout += pid->ITerm;                                     // 累加积分
+        pid->Output = pid->Pout + pid->Iout + pid->Dout + pid->Fout; // 计算输出
 
         // 输出滤波
         if (pid->Improve & PID_OutputFilter)
@@ -204,11 +205,12 @@ float PIDCalculate(PIDInstance *pid, float measure, float ref)
     }
 
     // 保存当前数据,用于下次计算
+    pid->FFError      = pid->Output - pid->last_target;
     pid->Last_Measure = pid->Measure;
     pid->Last_Output  = pid->Output;
     pid->Last_Dout    = pid->Dout;
     pid->Last_Err     = pid->Err;
     pid->Last_ITerm   = pid->ITerm;
-
+    pid->last_target  = pid->Output;
     return pid->Output;
 }

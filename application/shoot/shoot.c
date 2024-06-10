@@ -95,6 +95,7 @@ void ShootInit()
                 .Improve       = PID_Integral_Limit,
                 .IntegralLimit = 5000,
                 .MaxOut        = 20000,
+                
             },
             .current_PID = {
                 .Kp            = 3.21281502722044,
@@ -103,6 +104,7 @@ void ShootInit()
                 .Improve       = PID_Integral_Limit,
                 .IntegralLimit = 5000,
                 .MaxOut        = 5000,
+                
             },
         },
         .controller_setting_init_config = {
@@ -134,14 +136,15 @@ void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
 /* 机器人发射机构控制核心任务 */
 void ShootTask()
 {
-    if (shoot_cmd_recv.Shoot_power) {
-        // 从cmd获取控制数据
 #ifdef ONE_BROAD
-        SubGetMessage(shoot_sub, &shoot_cmd_recv);
+    SubGetMessage(shoot_sub, &shoot_cmd_recv);
 #endif // ONE_BORAD
 #ifdef GIMBAL_BROAD
 // 在robot.c可以获得值
 #endif // DEBUG
+    if (shoot_cmd_recv.Shoot_power) {
+        // 从cmd获取控制数据
+
         // 对shoot mode等于SHOOT_STOP的情况特殊处理,直接停止所有电机(紧急停止)
         if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
             DJIMotorStop(friction_l);
@@ -183,7 +186,7 @@ void ShootTask()
                 }
                 break;
             default:
-               break;// 未知模式,停止运行,检查指针越界,题
+                break; // 未知模式,停止运行,检查指针越界,题
         }
         if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
             DJIMotorSetRef(friction_l, friction_speed);
@@ -193,12 +196,13 @@ void ShootTask()
             DJIMotorSetRef(friction_l, 0);
             DJIMotorSetRef(friction_r, 0);
         }
-#ifdef ONE_BROAD
-        PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
-#endif // DEBUG
+ 
     } else {
         DJIMotorStop(friction_l);
         DJIMotorStop(friction_r);
         DJIMotorStop(loader);
     }
+#ifdef ONE_BROAD
+    PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
+#endif // DEBUG
 }

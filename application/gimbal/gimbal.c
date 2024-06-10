@@ -144,7 +144,7 @@ void GimbalInit()
         },
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp            = 5, // 10
+                .Kp            = 10, // 10
                 .Ki            = 0,
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
@@ -152,7 +152,7 @@ void GimbalInit()
                 .MaxOut        = 500,
             },
             .speed_PID = {
-                .Kp            = 20000, // 50
+                .Kp            = 14000, // 50
                 .Ki            = 2,     // 350
                 .Kd            = 0,     // 0
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
@@ -196,21 +196,20 @@ void GimbalInit()
 /* 机器人云台控制核心任务,后续考虑只保留IMU控制,不再需要电机的反馈 */
 void GimbalTask()
 {
-    if (gimbal_cmd_recv.Gimbal_power) {//云台上电才会施行该任务
 #ifdef ONEBROAD
-        SubGetMessage(gimbal_sub, &gimbal_cmd_recv);
+    SubGetMessage(gimbal_sub, &gimbal_cmd_recv);
 #endif // DEBUG
 #ifdef GIMBAL_BOARD
-        // 从robot中即可获得gimbal_cmd_recv
-#endif // DEBUG
-
+    // 从robot中即可获得gimbal_cmd_recv
+#endif                                  // DEBUG
+    if (gimbal_cmd_recv.Gimbal_power) { // 云台上电才会施行该任务
 
         switch (gimbal_cmd_recv.sight_mode) {
             case SIGHT_ON:
                 Servo_Motor_FreeAngle_Set(sight_module, 40);
                 break;
             case SIGHT_OFF:
-                Servo_Motor_FreeAngle_Set(sight_module, 200);
+                Servo_Motor_FreeAngle_Set(sight_module, 50);
                 break;
         } // 望远镜舵机控制
 
@@ -250,17 +249,18 @@ void GimbalTask()
 
         // 设置反馈数据,主要是imu和yaw的ecd
         // gimbal_feedback_data.gimbal_imu_data              = gimbal_IMU_data;//需要时可以添加
-        gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
-        gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
         // 推送消息
-#ifdef ONE_BROAD
-        PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
-#endif // DEBUG
-#ifdef GIMBAL_BOARD
 
-#endif // DEBUG
     } else {
         DJIMotorStop(yaw_motor);
         DJIMotorStop(pitch_motor);
     }
+#ifdef ONE_BROAD
+    PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
+#endif // DEBUG
+#ifdef GIMBAL_BOARD
+
+#endif                                                                                                   // DEBUG
+    gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
+    gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
 }

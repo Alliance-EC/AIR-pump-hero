@@ -43,7 +43,7 @@ static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数�
 static Publisher_t *referee_pub;
 static referee_info_t *referee_data; // 用于获取裁判系统的数据
 static Publisher_t *CAP_PUB;
-static SuperCapInstance *cap;                                              // 超级电容
+static SuperCapInstance *cap;                                       // 超级电容
 static DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 // static Chassis_Power_Data_s chassis_power_data;
 
@@ -288,11 +288,12 @@ uint16_t rotate_num;
 /* 机器人底盘控制核心任务 */
 void ChassisTask()
 {
+    SubGetMessage(chassis_sub, &chassis_cmd_recv); // DEBUG
+
     if (referee_data->GameRobotState.mains_power_chassis_output == 1) {
         // 后续增加没收到消息的处理(双板的情况)
         // 获取新的控制信息
-        SubGetMessage(chassis_sub, &chassis_cmd_recv); // DEBUG
-
+        
         if (chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE) { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
             DJIMotorStop(motor_lf);
             DJIMotorStop(motor_rf);
@@ -351,8 +352,6 @@ void ChassisTask()
         Power_level_get();
         SuperCapSend(cap, (uint8_t *)&cap->cap_msg_g);
         // 推送反馈消息
-        PubPushMessage(referee_pub, (void *)referee_data);
-        PubPushMessage(CAP_PUB, (void *)cap);
 #ifdef CHASSIS_BOARD
 
 #endif // DEBUG
@@ -365,4 +364,6 @@ void ChassisTask()
         DJIMotorStop(motor_rf);
         DJIMotorStop(motor_lf);
     }
+    PubPushMessage(referee_pub, (void *)referee_data);
+    PubPushMessage(CAP_PUB, (void *)cap);
 }

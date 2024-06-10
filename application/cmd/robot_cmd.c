@@ -51,7 +51,7 @@ static Shoot_Upload_Data_s shoot_fetch_data; // 从发射获取的反馈信息
 static Robot_Status_e robot_state; // 机器人整体工作状态
 static Subscriber_t *Referee_Data_For_UI;
 static Subscriber_t *Cap_data_For_UI;
-static SuperCapInstance *cap_UI;
+static SuperCapInstance cap_UI;
 static referee_info_t referee_data;
 void RobotCMDInit()
 {
@@ -323,15 +323,15 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
     UI_data.Bullet_ready = shoot_fetch_data.Bullet_ready;
     UI_data.All_robot_HP = referee_data.GameRobotHP;
     UI_data.pitch_data   = gimbal_fetch_data.Pitch_data;
-    UI_data.fri_mode   = shoot_cmd_send.friction_mode;
+    UI_data.fri_mode     = shoot_cmd_send.friction_mode;
     UI_data.chassis_mode = chassis_cmd_send.chassis_mode;
     UI_data.remain_HP    = referee_data.GameRobotState.remain_HP;
     UI_data.load_Mode    = One_shoot_flag;
     UI_data.Max_HP       = referee_data.GameRobotState.max_HP;
     UI_data.Angle        = chassis_cmd_send.offset_angle;
-    UI_data.CapVot       = cap_UI->cap_msg_s.CapVot;
+    UI_data.CapVot       = cap_UI.cap_msg_s.CapVot;
 
-    // UI_data.Air_ready    = shoot_fetch_data.bullet_ready;
+    // UI_data.Air_ready    = shoot_fetch_data.bullet_ready; 
 }
 extern DJIMotorInstance *motor_lf;
 extern Power_Data_s power_data;
@@ -357,17 +357,16 @@ void RobotCMDTask()
         RemoteControlSet();
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
-
+    gimbal_cmd_send.Gimbal_power = referee_data.GameRobotState.mains_power_gimbal_output;
+    shoot_cmd_send.Shoot_power   = referee_data.GameRobotState.mains_power_shooter_output;
 #ifdef CHASSIS_BOARD
-    if (referee_data.GameRobotState.mains_power_gimbal_output == 1) {
-        chassis_send_data_ToUpboard.gimbal_cmd_upload = gimbal_cmd_send;
-        chassis_send_data_ToUpboard.shoot_cmd_upload  = shoot_cmd_send;
-        // chassis_send_data_ToUpboard.rpm_speed=motor_lf->measure.speed_aps/6.0f;
-        // chassis_send_data_ToUpboard.current=motor_lf->measure.real_current;
-        // chassis_send_data_ToUpboard.real_power=referee_data.PowerHeatData.chassis_power;
-        // chassis_send_data_ToUpboard.pre_power=power_data.total_power;
-        CANCommSend(chassis_can_comm, (void *)&chassis_send_data_ToUpboard);
-    }
+    chassis_send_data_ToUpboard.gimbal_cmd_upload = gimbal_cmd_send;
+    chassis_send_data_ToUpboard.shoot_cmd_upload  = shoot_cmd_send;
+    // chassis_send_data_ToUpboard.rpm_speed=motor_lf->measure.speed_aps/6.0f;
+    // chassis_send_data_ToUpboard.current=motor_lf->measure.real_current;
+    // chassis_send_data_ToUpboard.real_power=referee_data.PowerHeatData.chassis_power;
+    // chassis_send_data_ToUpboard.pre_power=power_data.total_power;
+    CANCommSend(chassis_can_comm, (void *)&chassis_send_data_ToUpboard);
 #endif // DEBUG
 
 #ifdef ONE_BOARD

@@ -305,7 +305,7 @@ void DJIMotorControl()
             if (power_data.count > 3) {
                 power_data.count = 0;
             }
-        }
+        }//计算四个轮电机的功率
 
         // 若该电机处于停止状态,直接将buff置零
         if (motor->stop_flag == MOTOR_STOP)
