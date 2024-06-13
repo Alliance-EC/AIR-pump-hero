@@ -60,6 +60,7 @@ typedef struct
     float Ki;
     float Kd;
     float Kf;
+    float staticff;
     float MaxOut;
     float DeadBand;
 
@@ -80,7 +81,7 @@ typedef struct
     float Last_ITerm;
 
     float Pout;
-    float Iout;     
+    float Iout;
     float Dout;
     float Fout;
     float ITerm;
@@ -93,8 +94,8 @@ typedef struct
 
     uint32_t DWT_CNT;
     float dt;
-    //Feedforward
-   
+    // Feedforward
+
     float FFError;
     float last_target;
     PID_ErrorHandler_t ERRORHandler;
@@ -107,7 +108,8 @@ typedef struct // config parameter
     float Kp;
     float Ki;
     float Kd;
-     float Kf;
+    float Kf;
+    float staticff;
     float MaxOut;   // 输出限幅
     float DeadBand; // 死区
     // improve parameter

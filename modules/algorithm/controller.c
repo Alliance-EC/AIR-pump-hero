@@ -189,8 +189,8 @@ float PIDCalculate(PIDInstance *pid, float measure, float ref)
         if (pid->Improve & PID_Integral_Limit)
             f_Integral_Limit(pid);
 
-        pid->Iout += pid->ITerm;                                     // 累加积分
-        pid->Output = pid->Pout + pid->Iout + pid->Dout + pid->Fout; // 计算输出
+        pid->Iout += pid->ITerm;                                                     // 累加积分
+        pid->Output = pid->Pout + pid->Iout + pid->Dout + pid->Fout + pid->staticff; // 计算输出
 
         // 输出滤波
         if (pid->Improve & PID_OutputFilter)
