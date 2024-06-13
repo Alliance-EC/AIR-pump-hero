@@ -59,6 +59,7 @@ typedef struct
     float Kp;
     float Ki;
     float Kd;
+    float Kf;
     float MaxOut;
     float DeadBand;
 
@@ -93,7 +94,7 @@ typedef struct
     uint32_t DWT_CNT;
     float dt;
     //Feedforward
-    float Kf;
+   
     float FFError;
     float last_target;
     PID_ErrorHandler_t ERRORHandler;
@@ -106,9 +107,9 @@ typedef struct // config parameter
     float Kp;
     float Ki;
     float Kd;
+     float Kf;
     float MaxOut;   // 输出限幅
     float DeadBand; // 死区
-    float Kf;   // 
     // improve parameter
     PID_Improvement_e Improve;
     float IntegralLimit; // 积分限幅

@@ -230,7 +230,7 @@ void GimbalTask()
                 break;
             case GIMBAL_GYRO_MODE:
                 GimbalInputGet();
-                DJIMotorEnable(yaw_motor);
+    DJIMotorEnable(yaw_motor);
                 DJIMotorEnable(pitch_motor);
                 DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
                 DJIMotorChangeFeed(yaw_motor, SPEED_LOOP, OTHER_FEED);
