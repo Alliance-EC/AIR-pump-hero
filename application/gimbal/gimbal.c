@@ -194,6 +194,7 @@ void GimbalInit()
 #endif // DEBUG
 }
 /* 机器人云台控制核心任务,后续考虑只保留IMU控制,不再需要电机的反馈 */
+
 void GimbalTask()
 {
 #ifdef ONEBROAD
@@ -206,10 +207,10 @@ void GimbalTask()
 
         switch (gimbal_cmd_recv.sight_mode) {
             case SIGHT_ON:
-                Servo_Motor_FreeAngle_Set(sight_module, 40);
+                Servo_Motor_FreeAngle_Set(sight_module, 116);
                 break;
             case SIGHT_OFF:
-                Servo_Motor_FreeAngle_Set(sight_module, 50);
+                Servo_Motor_FreeAngle_Set(sight_module, 15);
                 break;
         } // 望远镜舵机控制
 

@@ -16,6 +16,7 @@ typedef struct
     uint8_t Bullet_ready;
     ext_game_robot_HP_t All_robot_HP;
     float CapVot;
+    int Frition_speed;
     //Shoot_Step Air_ready;
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;
@@ -24,6 +25,7 @@ extern Graph_Data_t line_fuzhu_three;
 extern void MyUIInit(void);
 extern void MyUIRefresh(void);
 extern void get_referee_data(referee_info_t *referee_data);
-extern uint8_t check_to_change_UI(UIdate_for_change *UI_now);
+extern uint8_t Change_UI_Data(UIdate_for_change *UI_now);
 extern void UIfresh_Always();
+extern int UI_flag_second;
 #endif

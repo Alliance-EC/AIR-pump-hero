@@ -20,6 +20,6 @@ int8_t UITaskInit(MyUIInit_Ptr MyuiInit, MyUIRefresh_Ptr MyUIRefresh);
  * @brief 裁判系统交互任务(UI和多机通信)
  *
  */
-void UITask();
+// void UITask();
 
 #endif // !_REFEREE_INIT_H_

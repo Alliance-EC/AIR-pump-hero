@@ -45,7 +45,7 @@
 // 对应key[x][0~16],获取对应的键;例如通过key[KEY_PRESS][Key_W]获取W键是否按下,后续改为位域后删除
 #define Key_W 0
 #define Key_S 1
-#define Key_D 2
+#define Key_D 2           
 #define Key_A 3
 #define Key_Shift 4
 #define Key_Ctrl 5
@@ -55,7 +55,7 @@
 #define Key_F 9
 #define Key_G 10
 #define Key_Z 11
-#define Key_X 12
+#define Key_X 12 
 #define Key_C 13
 #define Key_V 14
 #define Key_B 15

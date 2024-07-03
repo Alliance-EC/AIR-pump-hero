@@ -89,12 +89,12 @@ const osThreadAttr_t insTask_attributes = {
   .stack_size = 2048 * 4,
   .priority = (osPriority_t) osPriorityRealtime5,
 };
-/* Definitions for UITask */
-osThreadId_t UITaskHandle;
-const osThreadAttr_t UITask_attributes = {
-  .name = "UITask",
+/* Definitions for NewUItask */
+osThreadId_t NewUItaskHandle;
+const osThreadAttr_t NewUItask_attributes = {
+  .name = "NewUItask",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityNormal7,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,7 +108,7 @@ void BuzzerTask(void *argument);
 void Startrobottask(void *argument);
 void StartLEDtask(void *argument);
 void StartINSTASK(void *argument);
-void UItask(void *argument);
+void NewUItask1(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -158,8 +158,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of insTask */
   insTaskHandle = osThreadNew(StartINSTASK, NULL, &insTask_attributes);
 
-  /* creation of UITask */
-  UITaskHandle = osThreadNew(UItask, NULL, &UITask_attributes);
+  /* creation of NewUItask */
+  NewUItaskHandle = osThreadNew(NewUItask1, NULL, &NewUItask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
@@ -284,22 +284,22 @@ __weak void StartINSTASK(void *argument)
   /* USER CODE END StartINSTASK */
 }
 
-/* USER CODE BEGIN Header_UItask */
+/* USER CODE BEGIN Header_NewUItask1 */
 /**
-* @brief Function implementing the UITask thread.
+* @brief Function implementing the NewUItask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_UItask */
-__weak void UItask(void *argument)
+/* USER CODE END Header_NewUItask1 */
+__weak void NewUItask1(void *argument)
 {
-  /* USER CODE BEGIN UItask */
+  /* USER CODE BEGIN NewUItask1 */
   /* Infinite loop */
   for(;;)
   {
     osDelay(1);
   }
-  /* USER CODE END UItask */
+  /* USER CODE END NewUItask1 */
 }
 
 /* Private application code --------------------------------------------------*/

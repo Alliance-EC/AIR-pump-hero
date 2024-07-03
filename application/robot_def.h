@@ -17,8 +17,8 @@
 #include "stdint.h"
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // 单板控制整车
-// #define CHASSIS_BOARD //底盘板 
-#define GIMBAL_BOARD  //云台板  
+#define CHASSIS_BOARD //底盘板 
+// #define GIMBAL_BOARD  //云台板  
 #define TESTCODE
 #define VISION_USE_VCP // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
@@ -30,6 +30,7 @@
 #define PITCH_HORIZON_ECD         400 // 云台处于水平位置时编码器值,若对云台有机械改动需要修改
 #define PITCH_MAX_ANGLE           0.76   // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
 #define PITCH_MIN_ANGLE           -0.34    // 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
+#define Fine_tuning_parameter     0.3
 //将编码器转换成角度值
 
 #define YAW_ALIGN_ANGLE     (YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI) // 对齐时的角度,0-360
@@ -39,6 +40,7 @@
 #define REDUCTION_RATIO_LOADER 49.0f // 拨盘电机的减速比,英雄需要修改为3508的19.0f
 #define NUM_PER_CIRCLE         10    // 拨盘一圈的装载量
 #define Target_bullet_speed    15.7
+#define Inital_Friction_Speed 35600
 // 机器人底盘修改的参数,单位为mm(毫米)
 #define WHEEL_BASE             630    // 纵向轴距(前进后退方向)
 #define TRACK_WIDTH            462    // 横向轮距(左右平移方向)
@@ -46,8 +48,8 @@
 #define CENTER_GIMBAL_OFFSET_Y 0     // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0
 #define RADIUS_WHEEL           76.25f    // 轮子半径
 #define REDUCTION_RATIO_WHEEL  19.2f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换
-#define CHASSIS_MAX_SPEED 15000  //键鼠下的最大速度
-#define PRE_SPEED_UP 2000 //每次增加的速度
+#define CHASSIS_MAX_SPEED 20000  //键鼠下的最大速度
+#define PRE_SPEED_UP 30 //每次增加的速度
 // 陀螺仪校准数据，开启陀螺仪校准后可从INS中获取
 #define BMI088_PRE_CALI_GYRO_X_OFFSET -0.00260018627
 #define BMI088_PRE_CALI_GYRO_Y_OFFSET 0.00221270346     
@@ -133,6 +135,10 @@ typedef enum {
     LOAD_MODE,   // 装弹模式    
     LOAD_1_BULLET,  // 单发
 } loader_mode_e;
+typedef enum {
+    One_shoot_mdoe =0 ,
+    BiuBiuBiu,
+} Fire_mode_e;
 
 typedef enum {
     Follow_shoot=0,
@@ -182,6 +188,7 @@ typedef struct
     loader_mode_e load_mode;
    // lid_mode_e lid_mode;
     friction_mode_e friction_mode;
+    int16_t friction_speed_adjust;
     //uint8_t rest_heat;
     uint8_t Shoot_power;
 } Shoot_Ctrl_Cmd_s;

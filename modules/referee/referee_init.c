@@ -29,23 +29,23 @@ int8_t UITaskInit(MyUIInit_Ptr MyuiInit, MyUIRefresh_Ptr MyUIRefresh)
     return 0;
 }
 
-static uint8_t UiInitFlag = 0;
-/**
- * @brief 裁判系统交互任务(UI和多机通信)
- *
- */
-void UITask()
-{
-    if (referee_info_t_ptr->init_flag == 1)
-    {
-        if (!UiInitFlag)
-        {
-            (*MyuiInitLocal)();
-            UiInitFlag = 1;
-        }
-        else
-        {
-            (*MyUIRefreshLocal)();
-        }
-    }
-}
+// static uint8_t UiInitFlag = 0;
+// /**
+//  * @brief 裁判系统交互任务(UI和多机通信)
+//  *
+//  */
+// void UITask()
+// {
+//     if (referee_info_t_ptr->init_flag == 1)
+//     {
+//         if (!UiInitFlag)
+//         {
+//             (*MyuiInitLocal)();
+//             UiInitFlag = 1;
+//         }
+//         else
+//         {
+//             (*MyUIRefreshLocal)();
+//         }
+//     }
+// }
