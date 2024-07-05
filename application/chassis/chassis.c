@@ -44,7 +44,7 @@ static Publisher_t *referee_pub;
 static referee_info_t *referee_data; // 用于获取裁判系统的数据
 static Publisher_t *CAP_PUB;
 static SuperCapInstance *cap;                                       // 超级电容
-static DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
+ DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 // static Chassis_Power_Data_s chassis_power_data;
 
 /* 用于自旋变速策略的时间变量 */
@@ -163,9 +163,11 @@ static void MecanumCalculate()
 // float vt_lf_Now, vt_rf_Now, vt_lb_Now, vt_rb_Now;
 float Plimit;
 float power_lecel = 0;
-
+extern int maxspeed_chassis;
 static void LimitChassisOutput()
 {
+    maxspeed_chassis = CHASSIS_MAX_SPEED;
+    PowerControlInit(referee_data->GameRobotState.chassis_power_limit*0.85, 1);
     if (referee_data->PowerHeatData.chassis_power_buffer < 50 && referee_data->PowerHeatData.chassis_power_buffer >= 40)
         Plimit = 0.9 + (referee_data->PowerHeatData.chassis_power_buffer - 40) * 0.01;
     else if (referee_data->PowerHeatData.chassis_power_buffer < 40 && referee_data->PowerHeatData.chassis_power_buffer >= 35)
@@ -183,10 +185,10 @@ static void LimitChassisOutput()
     else if (referee_data->PowerHeatData.chassis_power_buffer == 60)
         Plimit = 1;
     power_lecel = referee_data->GameRobotState.robot_level * 0.15 + 0.8;
-    vt_lf       = 1 * vt_lf * Plimit * power_lecel;
-    vt_rf       = 1 * vt_rf * Plimit * power_lecel;
-    vt_lb       = 1 * vt_lb * Plimit * power_lecel;
-    vt_rb       = 1 * vt_rb * Plimit * power_lecel;
+    // vt_lf       = 1 * vt_lf * Plimit * power_lecel;
+    // vt_rf       = 1 * vt_rf * Plimit * power_lecel;
+    // vt_lb       = 1 * vt_lb * Plimit * power_lecel;
+    // vt_rb       = 1 * vt_rb * Plimit * power_lecel;
 
     DJIMotorSetRef(motor_lf, vt_lf);
     DJIMotorSetRef(motor_rf, vt_rf);
@@ -201,10 +203,12 @@ static void LimitChassisOutput()
  */
 static void No_Limit_Control()
 {
-    DJIMotorSetRef(motor_lf, vt_lf * 1.5);
-    DJIMotorSetRef(motor_rf, vt_rf * 1.5);
-    DJIMotorSetRef(motor_lb, vt_lb * 1.5);
-    DJIMotorSetRef(motor_rb, vt_rb * 1.5);
+    maxspeed_chassis = CHASSIS_MAX_SPEED +20000;
+    PowerControlInit(200, 1);
+    DJIMotorSetRef(motor_lf, vt_lf);
+    DJIMotorSetRef(motor_rf, vt_rf);
+    DJIMotorSetRef(motor_lb, vt_lb);
+    DJIMotorSetRef(motor_rb, vt_rb);
 }
 static void EstimateSpeed()
 {
@@ -293,7 +297,7 @@ void ChassisTask()
     if (referee_data->GameRobotState.mains_power_chassis_output == 1) {
         // 后续增加没收到消息的处理(双板的情况)
         // 获取新的控制信息
-        
+
         if (chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE) { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
             DJIMotorStop(motor_lf);
             DJIMotorStop(motor_rf);
@@ -313,13 +317,13 @@ void ChassisTask()
                 chassis_cmd_recv.wz = 0;
                 break;
             case CHASSIS_FOLLOW_GIMBAL_YAW: // 跟随云台,不单独设置pid,以误差角度平方为速度输出
-                chassis_cmd_recv.wz = -chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle) * 1;
+                chassis_cmd_recv.wz = -chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle) * 4;
                 break;
             case CHASSIS_ROTATE: // 自旋,同时保持全向机动;当前wz维持定值,后续增加不规则的变速策略
                 if (rotate_num % 2 == 1)
-                    chassis_cmd_recv.wz = 2000;
+                    chassis_cmd_recv.wz = 3000;
                 else
-                    chassis_cmd_recv.wz = -2000;
+                    chassis_cmd_recv.wz = -3000;
                 break;
             case CHASSIS_ZERO_FORCE:
                 break;

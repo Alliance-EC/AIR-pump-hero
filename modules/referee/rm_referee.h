@@ -16,7 +16,12 @@ typedef struct
 	uint16_t Cilent_ID;			// 本机器人对应的客户端ID
 	uint16_t Receiver_Robot_ID; // 机器人车间通信时接收者的ID，必须和本机器人同颜色
 } referee_id_t;
-
+typedef  struct
+{
+ uint16_t projectile_allowance_17mm;
+ uint16_t projectile_allowance_42mm;
+ uint16_t remaining_gold_coin;
+}projectile_allowance_t;
 // 此结构体包含裁判系统接收数据以及UI绘制与机器人车间通信的相关信息
 typedef struct
 {
@@ -36,6 +41,7 @@ typedef struct
 	aerial_robot_energy_t AerialRobotEnergy;			   // 0x0205
 	ext_robot_hurt_t RobotHurt;							   // 0x0206
 	ext_shoot_data_t ShootData;							   // 0x0207
+	projectile_allowance_t Allowance_bullet ;//0x208
 
 	// 自定义交互数据的接收
 	Communicate_ReceiveData_t ReceiveData;

@@ -175,9 +175,9 @@ void ShootTask()
                 break;
             // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
             case LOAD_1_BULLET:
-                if (One_Shoot_flag == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON) {
+                if (One_Shoot_flag == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON&&shoot_cmd_recv.rest_heat==0) {
                     DJIMotorOuterLoop(loader, SPEED_LOOP);
-                    DJIMotorSetRef(loader, 4000); // 完成1发弹丸发射的时间
+                    DJIMotorSetRef(loader, 7000); // 完成1发弹丸发射的时间
                 } else {
                     DJIMotorSetRef(loader, 0);
                 }
@@ -186,7 +186,7 @@ void ShootTask()
             case LOAD_MODE: // 装弹模式
                 if (Shoot_limit_for_oneshootPC6 == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON) {
                     DJIMotorOuterLoop(loader, SPEED_LOOP);
-                    DJIMotorSetRef(loader, 1500);
+                    DJIMotorSetRef(loader, 6000);
                      // 完成1发弹丸发射的时间
                 } else {
                     One_Shoot_flag = 1;
@@ -194,6 +194,12 @@ void ShootTask()
                     DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
                 }
                 break;
+            case LOAD_BURSTFIRE:
+            if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+                DJIMotorOuterLoop(loader, SPEED_LOOP);
+                DJIMotorSetRef(loader, 8000);
+            }
+            break;
             default:
                 break; // 未知模式,停止运行,检查指针越界,题
         }
@@ -202,8 +208,8 @@ void ShootTask()
             DJIMotorSetRef(friction_r, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
         } else // 关闭摩擦轮
         {
-            DJIMotorSetRef(friction_l, -2000);
-            DJIMotorSetRef(friction_r, -2000);
+            DJIMotorSetRef(friction_l, -200);
+            DJIMotorSetRef(friction_r, -200);
         }
 
     } else {

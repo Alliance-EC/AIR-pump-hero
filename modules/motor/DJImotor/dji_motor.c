@@ -298,7 +298,7 @@ void DJIMotorControl()
         sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(set & 0x00ff); // 高八位
 
         if (group == 1) {
-            power_data.input_power[power_data.count]    = PowerInputCalc(motor->measure.speed_aps, motor->motor_controller.speed_PID.Output);
+            power_data.input_power[power_data.count]    = PowerInputCalc(motor->measure.speed_aps, motor->measure.real_current);
             power_data.wheel_speed[power_data.count]    = motor->measure.speed_aps;
             power_data.predict_output[power_data.count] = motor->motor_controller.speed_PID.Output;
             power_data.count++;
@@ -315,13 +315,13 @@ void DJIMotorControl()
     int index = 0;
     if (dji_motor_instance[index]->stop_flag == MOTOR_ENABLED) {
         power_data.total_power = TotalPowerCalc(power_data.input_power);
-        // for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
 
-        //     set = CurrentOutputCalc(power_data.input_power[i], power_data.wheel_speed[i], power_data.predict_output[i]);
-        //     sender_assignment[1].tx_buff[2 * i]     = (uint8_t)(set >> 8);     // 低八位
-        //     sender_assignment[1].tx_buff[2 * i + 1] = (uint8_t)(set & 0x00ff); // 高八位
-        //     motor_output = set;
-        // }
+            set = CurrentOutputCalc(power_data.input_power[i], power_data.wheel_speed[i], power_data.predict_output[i]);
+            sender_assignment[1].tx_buff[2 * i]     = (uint8_t)(set >> 8);     // 低八位
+            sender_assignment[1].tx_buff[2 * i + 1] = (uint8_t)(set & 0x00ff); // 高八位
+            motor_output = set;
+        }
     }
 
     // 遍历flag,检查是否要发送这一帧报文

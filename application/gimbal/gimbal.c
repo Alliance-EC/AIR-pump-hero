@@ -194,7 +194,6 @@ void GimbalInit()
 #endif // DEBUG
 }
 /* 机器人云台控制核心任务,后续考虑只保留IMU控制,不再需要电机的反馈 */
-
 void GimbalTask()
 {
 #ifdef ONEBROAD
@@ -213,15 +212,15 @@ void GimbalTask()
                 Servo_Motor_FreeAngle_Set(sight_module, 15);
                 break;
         } // 望远镜舵机控制
-
-        switch (gimbal_cmd_recv.image_mode) {
-            case Follow_shoot:
-                Servo_Motor_FreeAngle_Set(image_module, 34);
-                break;
-            case snipe:
-                Servo_Motor_FreeAngle_Set(image_module, 41 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);
-                break;
-        } // 图传舵机控制
+        Servo_Motor_FreeAngle_Set(image_module, 37);
+        // switch (gimbal_cmd_recv.image_mode) {
+        //     case Follow_shoot:
+        //         Servo_Motor_FreeAngle_Set(image_module, 30);
+        //         break;
+        //     case snipe:
+        //         Servo_Motor_FreeAngle_Set(image_module, 41 + gimbal_IMU_data->output.INS_angle_deg[1] * 0.7);
+        //         break;
+        // } // 图传舵机控制
 
         switch (gimbal_cmd_recv.gimbal_mode) {
             // 停止
@@ -263,5 +262,5 @@ void GimbalTask()
 
 #endif                                                                                                   // DEBUG
     gimbal_feedback_data.yaw_motor_single_round_angle = (uint16_t)yaw_motor->measure.angle_single_round; // 推送消息
-    gimbal_feedback_data.Pitch_data                   = gimbal_IMU_data->output.INS_angle_deg[1];
+    gimbal_feedback_data.Pitch_data                   = -gimbal_IMU_data->output.INS_angle_deg[1];
 }

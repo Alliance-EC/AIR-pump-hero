@@ -25,7 +25,7 @@
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 云台参数
-#define YAW_CHASSIS_ALIGN_ECD     2884 // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
+#define YAW_CHASSIS_ALIGN_ECD     6390 // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
 #define YAW_ECD_GREATER_THAN_4096 0    // ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度
 #define PITCH_HORIZON_ECD         400 // 云台处于水平位置时编码器值,若对云台有机械改动需要修改
 #define PITCH_MAX_ANGLE           0.76   // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
@@ -40,7 +40,7 @@
 #define REDUCTION_RATIO_LOADER 49.0f // 拨盘电机的减速比,英雄需要修改为3508的19.0f
 #define NUM_PER_CIRCLE         10    // 拨盘一圈的装载量
 #define Target_bullet_speed    15.7
-#define Inital_Friction_Speed 35600
+#define Inital_Friction_Speed 34600
 // 机器人底盘修改的参数,单位为mm(毫米)
 #define WHEEL_BASE             630    // 纵向轴距(前进后退方向)
 #define TRACK_WIDTH            462    // 横向轮距(左右平移方向)
@@ -48,12 +48,12 @@
 #define CENTER_GIMBAL_OFFSET_Y 0     // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0
 #define RADIUS_WHEEL           76.25f    // 轮子半径
 #define REDUCTION_RATIO_WHEEL  19.2f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换
-#define CHASSIS_MAX_SPEED 20000  //键鼠下的最大速度
+#define CHASSIS_MAX_SPEED 45000  //键鼠下的最大速度
 #define PRE_SPEED_UP 30 //每次增加的速度
 // 陀螺仪校准数据，开启陀螺仪校准后可从INS中获取
-#define BMI088_PRE_CALI_GYRO_X_OFFSET -0.00260018627
-#define BMI088_PRE_CALI_GYRO_Y_OFFSET 0.00221270346     
-#define BMI088_PRE_CALI_GYRO_Z_OFFSET 0.000814812491
+#define BMI088_PRE_CALI_GYRO_X_OFFSET -0.00220665685
+#define BMI088_PRE_CALI_GYRO_Y_OFFSET 0.00124859624 
+#define BMI088_PRE_CALI_GYRO_Z_OFFSET 0.000518523972
 //陀螺仪默认环境温度
 #define BMI088_AMBIENT_TEMPERATURE 25.0f
 
@@ -134,6 +134,7 @@ typedef enum {
     LOAD_STOP = 0,  // 停止发射
     LOAD_MODE,   // 装弹模式    
     LOAD_1_BULLET,  // 单发
+    LOAD_BURSTFIRE,
 } loader_mode_e;
 typedef enum {
     One_shoot_mdoe =0 ,
@@ -189,7 +190,7 @@ typedef struct
    // lid_mode_e lid_mode;
     friction_mode_e friction_mode;
     int16_t friction_speed_adjust;
-    //uint8_t rest_heat;
+    uint8_t rest_heat;
     uint8_t Shoot_power;
 } Shoot_Ctrl_Cmd_s;
 
