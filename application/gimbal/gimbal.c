@@ -194,6 +194,7 @@ void GimbalInit()
 #endif // DEBUG
 }
 /* 机器人云台控制核心任务,后续考虑只保留IMU控制,不再需要电机的反馈 */
+int aaaa;
 void GimbalTask()
 {
 #ifdef ONEBROAD
@@ -201,18 +202,18 @@ void GimbalTask()
 #endif // DEBUG
 #ifdef GIMBAL_BOARD
     // 从robot中即可获得gimbal_cmd_recv
-#endif                                  // DEBUG
+#endif
+    switch (gimbal_cmd_recv.sight_mode) {
+        case SIGHT_ON:
+            Servo_Motor_FreeAngle_Set(sight_module, 116);
+            break;
+        case SIGHT_OFF:
+            Servo_Motor_FreeAngle_Set(sight_module, 15);
+            break;
+    } // 望远镜舵机控制                        // DEBUG
+    Servo_Motor_FreeAngle_Set(image_module, 58);
     if (gimbal_cmd_recv.Gimbal_power) { // 云台上电才会施行该任务
 
-        switch (gimbal_cmd_recv.sight_mode) {
-            case SIGHT_ON:
-                Servo_Motor_FreeAngle_Set(sight_module, 116);
-                break;
-            case SIGHT_OFF:
-                Servo_Motor_FreeAngle_Set(sight_module, 15);
-                break;
-        } // 望远镜舵机控制
-        Servo_Motor_FreeAngle_Set(image_module, 37);
         // switch (gimbal_cmd_recv.image_mode) {
         //     case Follow_shoot:
         //         Servo_Motor_FreeAngle_Set(image_module, 30);
@@ -230,7 +231,7 @@ void GimbalTask()
                 break;
             case GIMBAL_GYRO_MODE:
                 GimbalInputGet();
-    DJIMotorEnable(yaw_motor);
+                DJIMotorEnable(yaw_motor);
                 DJIMotorEnable(pitch_motor);
                 DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
                 DJIMotorChangeFeed(yaw_motor, SPEED_LOOP, OTHER_FEED);

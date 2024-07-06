@@ -54,7 +54,7 @@ static SuperCapInstance *cap;                                       // 超级电
 static float chassis_vx, chassis_vy;     // 将云台系的速度投影到底盘
 static float vt_lf, vt_rf, vt_lb, vt_rb; // 底盘速度解算后的临时输出,待进行限幅
 extern uint8_t Super_flag;
-
+extern uint8_t referee_init_flag;
 void ChassisInit()
 {
     // 修改减速比以及最大功率
@@ -167,7 +167,7 @@ extern int maxspeed_chassis;
 static void LimitChassisOutput()
 {
     maxspeed_chassis = CHASSIS_MAX_SPEED;
-    PowerControlInit(referee_data->GameRobotState.chassis_power_limit*0.85, 1);
+    PowerControlInit(referee_data->GameRobotState.chassis_power_limit*0.83, 1);
     if (referee_data->PowerHeatData.chassis_power_buffer < 50 && referee_data->PowerHeatData.chassis_power_buffer >= 40)
         Plimit = 0.9 + (referee_data->PowerHeatData.chassis_power_buffer - 40) * 0.01;
     else if (referee_data->PowerHeatData.chassis_power_buffer < 40 && referee_data->PowerHeatData.chassis_power_buffer >= 35)
@@ -203,8 +203,9 @@ static void LimitChassisOutput()
  */
 static void No_Limit_Control()
 {
-    maxspeed_chassis = CHASSIS_MAX_SPEED +20000;
-    PowerControlInit(200, 1);
+    maxspeed_chassis = CHASSIS_MAX_SPEED*2;
+    PowerControlInit(300, 1);
+    cap->cap_msg_g.power_relay_flag = 1;
     DJIMotorSetRef(motor_lf, vt_lf);
     DJIMotorSetRef(motor_rf, vt_rf);
     DJIMotorSetRef(motor_lb, vt_lb);
@@ -297,7 +298,11 @@ void ChassisTask()
     if (referee_data->GameRobotState.mains_power_chassis_output == 1) {
         // 后续增加没收到消息的处理(双板的情况)
         // 获取新的控制信息
+        if(referee_init_flag)
+        {
+                referee_data = RefereeHardwareInit(&huart6); // 裁判系统初始化,会同时初始化UI
 
+        }
         if (chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE) { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
             DJIMotorStop(motor_lf);
             DJIMotorStop(motor_rf);
@@ -321,10 +326,14 @@ void ChassisTask()
                 break;
             case CHASSIS_ROTATE: // 自旋,同时保持全向机动;当前wz维持定值,后续增加不规则的变速策略
                 if (rotate_num % 2 == 1)
-                    chassis_cmd_recv.wz = 3000;
-                else
-                    chassis_cmd_recv.wz = -3000;
-                break;
+                {
+                    chassis_cmd_recv.offset_angle+=27;
+                    chassis_cmd_recv.wz = 4000;
+                }
+                else{
+                    chassis_cmd_recv.offset_angle-=27;
+                    chassis_cmd_recv.wz = -4000;
+                }break;
             case CHASSIS_ZERO_FORCE:
                 break;
         }

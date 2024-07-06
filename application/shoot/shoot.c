@@ -177,7 +177,7 @@ void ShootTask()
             case LOAD_1_BULLET:
                 if (One_Shoot_flag == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON&&shoot_cmd_recv.rest_heat==0) {
                     DJIMotorOuterLoop(loader, SPEED_LOOP);
-                    DJIMotorSetRef(loader, 7000); // 完成1发弹丸发射的时间
+                    DJIMotorSetRef(loader, 8000); // 完成1发弹丸发射的时间
                 } else {
                     DJIMotorSetRef(loader, 0);
                 }
@@ -186,7 +186,7 @@ void ShootTask()
             case LOAD_MODE: // 装弹模式
                 if (Shoot_limit_for_oneshootPC6 == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON) {
                     DJIMotorOuterLoop(loader, SPEED_LOOP);
-                    DJIMotorSetRef(loader, 6000);
+                    DJIMotorSetRef(loader, 4500);
                      // 完成1发弹丸发射的时间
                 } else {
                     One_Shoot_flag = 1;

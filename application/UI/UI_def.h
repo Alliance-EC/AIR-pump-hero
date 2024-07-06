@@ -42,4 +42,7 @@
 #define center_tigger_X (SCREEN_LENGTH/2-5)
 #define center_tigger_Y (SCREEN_WIDTH/2-50)
 
+#define Center_bullet_worry_X (SCREEN_LENGTH/2+340)
+#define Center_bullet_worry_Y (SCREEN_WIDTH/2)
+
 #endif

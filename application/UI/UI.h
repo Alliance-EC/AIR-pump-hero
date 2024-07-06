@@ -18,6 +18,7 @@ typedef struct
     float CapVot;
     int Frition_speed;
     uint8_t Shoot_enemy;
+    uint8_t Bullet_empty;
     //Shoot_Step Air_ready;
 }UIdate_for_change;
 extern Graph_Data_t line_fuzhu_one;

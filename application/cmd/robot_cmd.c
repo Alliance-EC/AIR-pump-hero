@@ -117,6 +117,7 @@ static int Speed_vy, Speed_vx;
 static int Vx_A, Vy_A;
 static int friction_speed_adjust_ticknum;
 static uint8_t last_friction_mode;
+uint8_t referee_init_flag=0;
 static void MouseKeySet()
 {
     if ((rc_data[TEMP].rc.switch_left == RC_SW_DOWN) && (rc_data[TEMP].rc.switch_right == RC_SW_DOWN)) {
@@ -146,9 +147,9 @@ static void MouseKeySet()
             Speed_vy = 0;
         } else if (Speed_vy != 0) {
             if (Speed_vy > 0)
-                Speed_vy -= 500;
+                Speed_vy = 0;
             else
-                Speed_vy += 500;
+                Speed_vy = 0;
             if (Speed_vy < 1000 && Speed_vy > -1000)
                 Speed_vy = 0;
         }
@@ -164,9 +165,9 @@ static void MouseKeySet()
             Speed_vx = 0;
         } else if (Speed_vx != 0) {
             if (Speed_vx > 0)
-                Speed_vx -= 500;
+                Speed_vx = 0;
             else
-                Speed_vx += 500;
+                Speed_vx = 0;
             if (Speed_vx < 1000 && Speed_vx > -1000)
                 Speed_vx = 0;
         }
@@ -215,6 +216,10 @@ static void MouseKeySet()
     } else {
         One_shoot_flag = 0;
     }
+    if (rc_data[TEMP].key[KEY_PRESS_WITH_CTRL].r  == 1&&rc_data[TEMP].key[KEY_PRESS_WITH_SHIFT].r  == 1) {
+        referee_init_flag=1;
+    }
+    else referee_init_flag=0;
     switch (rc_data[TEMP].mouse.press_l) {
         case 1:
             if (shoot_cmd_send.friction_mode == FRICTION_ON) {
@@ -371,6 +376,10 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
         UI_data.Shoot_enemy = 1;
     else
         UI_data.Shoot_enemy = 0;
+    if (referee_data.Allowance_bullet.projectile_allowance_42mm <= 2)
+        UI_data.Bullet_empty = 1;
+    else
+        UI_data.Bullet_empty = 0;
     // UI_data.Air_ready    = shoot_fetch_data.bullet_ready;
 }
 extern DJIMotorInstance *motor_lf;
@@ -398,10 +407,10 @@ void RobotCMDTask()
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
     Get_UI_Data();
 
-    last_count_ctlrv = rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_V];
+    last_count_ctlrv                     = rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_V];
     last_friction_mode                   = shoot_cmd_send.friction_mode;
     shoot_cmd_send.friction_speed_adjust = friction_speed_adjust_ticknum;
-    
+
     if (referee_data.PowerHeatData.shooter_42mm_barrel_heat + 100 > referee_data.GameRobotState.shooter_cooling_limit)
         shoot_cmd_send.rest_heat = 1;
     else

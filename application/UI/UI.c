@@ -20,6 +20,7 @@ static Graph_Data_t Line_fuzhu_5m, Line_fuzhu_10m, Line_fuzhu_8m;
 // 辅助线图形变量
 static Graph_Data_t Dirction_Chassis1, Dirction_Chassis2, Dirction_Chassis3, Dirction_Chassis4;
 static Graph_Data_t Shoot_enemy1, Shoot_enemy2;
+static Graph_Data_t Bullet_worry1, Bullet_worry2, Bullet_worry3;
 static String_Data_t CAP_1;
 static String_Data_t friction_mode;
 static String_Data_t rotate_mode;
@@ -125,7 +126,13 @@ void MyUIInit(void)
         // 辅助线整体初始化
         UILineDraw(&Shoot_enemy1, "SE1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 1, SCREEN_LENGTH / 2 + 80, SCREEN_WIDTH / 2 + 80, SCREEN_LENGTH / 2 - 80, SCREEN_WIDTH / 2 - 80);
         UILineDraw(&Shoot_enemy2, "SE2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 1, SCREEN_LENGTH / 2 - 80, SCREEN_WIDTH / 2 + 80, SCREEN_LENGTH / 2 + 80, SCREEN_WIDTH / 2 - 80);
-        UIGraphRefresh(&referee_data_for_ui->referee_id, 2, Shoot_enemy1, Shoot_enemy2);
+        // 热量超载UI
+
+        UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 40, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
+        UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
+        UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
+        // 弹量告急UI
+        UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Shoot_enemy1, Shoot_enemy2, Bullet_worry1, Bullet_worry2, Bullet_worry3);
         if (UI_last.fri_mode == FRICTION_ON) {
             sprintf(friction_mode.show_Data, "BIU ON ");
             UICharDraw(&friction_mode, "002", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2, char_pitch);
@@ -135,8 +142,8 @@ void MyUIInit(void)
             UICharDraw(&friction_mode, "002", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2, char_pitch);
             UICharRefresh(&referee_data_for_ui->referee_id, friction_mode);
         } // 摩擦轮状态初始化
-        UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_last.CapVot * 1000);
-        UIFloatDraw(&Pitch_angle, "PTD", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, UI_last.pitch_data * 1000);
+        UIIntDraw(&CAP_power, "CAP", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_Now->CapVot * 10);
+        UIIntDraw(&Pitch_angle, "PTD", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 15, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, (UI_Now->pitch_data * 10));
         UIIntDraw(&Friction_speed, "FRS", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 50, UI_last.Frition_speed);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 7, Friction_speed, Pitch_angle, CAP_power, Line_fuzhu_5m, Line_fuzhu_center_1, Line_fuzhu_center_2, Line_fuzhu_10m);
         UI_flag_second = 1;
@@ -229,15 +236,15 @@ void MyUIRefresh(void)
         sprintf(friction_mode.show_Data, "BIU OFF");
         UICharDraw(&friction_mode, "002", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 350, SCREEN_WIDTH / 2, char_pitch);
     } // 摩擦轮状态更新
-    UIIntDraw(&Friction_speed, "FRS", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 50, UI_last.Frition_speed);
+    UIIntDraw(&Friction_speed, "FRS", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 350, SCREEN_WIDTH / 2 + 50, UI_last.Frition_speed);
 
-    UICircleDraw(&Dirction_Chassis1, "CD1", Graphic_Operate_CHANGE, 9, Graphic_Color_Pink, 2,
+    UICircleDraw(&Dirction_Chassis1, "CD1", Graphic_Operate_CHANGE, 9, Graphic_Color_Pink, 1,
                  Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 90) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 90) * DEGREE_2_RAD), 15);
-    UICircleDraw(&Dirction_Chassis2, "CD2", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 2,
+    UICircleDraw(&Dirction_Chassis2, "CD2", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 1,
                  Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 180) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 180) * DEGREE_2_RAD), 15);
-    UICircleDraw(&Dirction_Chassis3, "CD3", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 2,
+    UICircleDraw(&Dirction_Chassis3, "CD3", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 1,
                  Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 270) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 270) * DEGREE_2_RAD), 15);
-    UICircleDraw(&Dirction_Chassis4, "CD4", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 2,
+    UICircleDraw(&Dirction_Chassis4, "CD4", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 1,
                  Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 360) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 360) * DEGREE_2_RAD), 15);
 
     if (UI_Now->chassis_mode == CHASSIS_FOLLOW_GIMBAL_YAW) {
@@ -254,15 +261,23 @@ void MyUIRefresh(void)
     if (UI_Now->Shoot_enemy == 1) {
         UILineDraw(&Shoot_enemy1, "SE1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, SCREEN_LENGTH / 2 + 40, SCREEN_WIDTH / 2 + 40, SCREEN_LENGTH / 2 - 40, SCREEN_WIDTH / 2 - 40);
         UILineDraw(&Shoot_enemy2, "SE2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, SCREEN_LENGTH / 2 - 40, SCREEN_WIDTH / 2 + 40, SCREEN_LENGTH / 2 + 40, SCREEN_WIDTH / 2 - 40);
-        UIGraphRefresh(&referee_data_for_ui->referee_id, 2, Shoot_enemy1, Shoot_enemy2);
     } else {
         UILineDraw(&Shoot_enemy1, "SE1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 1, SCREEN_LENGTH + 80, SCREEN_WIDTH + 80, SCREEN_LENGTH - 80, SCREEN_WIDTH - 80);
         UILineDraw(&Shoot_enemy2, "SE2", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 1, SCREEN_LENGTH - 80, SCREEN_WIDTH + 80, SCREEN_LENGTH + 80, SCREEN_WIDTH - 80);
-        UIGraphRefresh(&referee_data_for_ui->referee_id, 2, Shoot_enemy1, Shoot_enemy2);
     }
+    if (UI_Now->Bullet_empty == 1) {
+        UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 40, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
+        UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
+        UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
+    } else {
+        UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 40, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
+        UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
+        UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
+    }
+    UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Shoot_enemy1, Shoot_enemy2, Bullet_worry1, Bullet_worry2, Bullet_worry3);
 
-    UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_Now->CapVot * 1000);
-    UIFloatDraw(&Pitch_angle, "PTD", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, UI_Now->pitch_data * 1000);
+    UIIntDraw(&CAP_power, "CAP", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_Now->CapVot * 10);
+    UIIntDraw(&Pitch_angle, "PTD", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 15, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, (UI_Now->pitch_data * 10));
     UICharRefresh(&referee_data_for_ui->referee_id, friction_mode);
     UICharRefresh(&referee_data_for_ui->referee_id, rotate_mode);
     UIGraphRefresh(&referee_data_for_ui->referee_id, 7, Pitch_angle, CAP_power, Friction_speed, Dirction_Chassis4, Dirction_Chassis3, Dirction_Chassis2, Dirction_Chassis1);
