@@ -39,10 +39,19 @@
 #define Pitch_angle_Y 400
 #define Radius_Pitch 80
 
-#define center_tigger_X (SCREEN_LENGTH/2-5)
+#define center_tigger_X (SCREEN_LENGTH/2-15)
 #define center_tigger_Y (SCREEN_WIDTH/2-50)
 
 #define Center_bullet_worry_X (SCREEN_LENGTH/2+340)
 #define Center_bullet_worry_Y (SCREEN_WIDTH/2)
+
+#define Center_outpose_firstX   (SCREEN_LENGTH/2-40)
+#define Center_outpose_firstY   (SCREEN_WIDTH/2+70)
+
+#define Center_base_7m_X   (947)
+#define Center_base_7m_Y   (605)
+
+#define Center_base_20m_X   (SCREEN_LENGTH/2-40)
+#define Center_base_20m_Y   (SCREEN_WIDTH/2+70)
 
 #endif

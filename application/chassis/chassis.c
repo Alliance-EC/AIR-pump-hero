@@ -54,7 +54,6 @@ static SuperCapInstance *cap;                                       // 超级电
 static float chassis_vx, chassis_vy;     // 将云台系的速度投影到底盘
 static float vt_lf, vt_rf, vt_lb, vt_rb; // 底盘速度解算后的临时输出,待进行限幅
 extern uint8_t Super_flag;
-extern uint8_t referee_init_flag;
 void ChassisInit()
 {
     // 修改减速比以及最大功率
@@ -63,10 +62,10 @@ void ChassisInit()
         .can_init_config.can_handle   = &hcan1,
         .controller_param_init_config = {
             .speed_PID = {
-                .Kp            = 0.5, // 4.5
-                .Ki            = 0,   // 0
+                .Kp            = 5, // 4.5
+                .Ki            = 0.1,   // 0
                 .Kd            = 0,   // 0
-                .IntegralLimit = 3000,
+                .IntegralLimit = 15000,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .MaxOut        = 15000,
                 0},
@@ -167,7 +166,7 @@ extern int maxspeed_chassis;
 static void LimitChassisOutput()
 {
     maxspeed_chassis = CHASSIS_MAX_SPEED;
-    PowerControlInit(referee_data->GameRobotState.chassis_power_limit*0.83, 1);
+    PowerControlInit(referee_data->GameRobotState.chassis_power_limit*0.88   , 1);
     if (referee_data->PowerHeatData.chassis_power_buffer < 50 && referee_data->PowerHeatData.chassis_power_buffer >= 40)
         Plimit = 0.9 + (referee_data->PowerHeatData.chassis_power_buffer - 40) * 0.01;
     else if (referee_data->PowerHeatData.chassis_power_buffer < 40 && referee_data->PowerHeatData.chassis_power_buffer >= 35)
@@ -185,10 +184,10 @@ static void LimitChassisOutput()
     else if (referee_data->PowerHeatData.chassis_power_buffer == 60)
         Plimit = 1;
     power_lecel = referee_data->GameRobotState.robot_level * 0.15 + 0.8;
-    // vt_lf       = 1 * vt_lf * Plimit * power_lecel;
-    // vt_rf       = 1 * vt_rf * Plimit * power_lecel;
-    // vt_lb       = 1 * vt_lb * Plimit * power_lecel;
-    // vt_rb       = 1 * vt_rb * Plimit * power_lecel;
+    vt_lf       = 1 * vt_lf * Plimit * power_lecel;
+    vt_rf       = 1 * vt_rf * Plimit * power_lecel;
+    vt_lb       = 1 * vt_lb * Plimit * power_lecel;
+    vt_rb       = 1 * vt_rb * Plimit * power_lecel;
 
     DJIMotorSetRef(motor_lf, vt_lf);
     DJIMotorSetRef(motor_rf, vt_rf);
@@ -298,11 +297,6 @@ void ChassisTask()
     if (referee_data->GameRobotState.mains_power_chassis_output == 1) {
         // 后续增加没收到消息的处理(双板的情况)
         // 获取新的控制信息
-        if(referee_init_flag)
-        {
-                referee_data = RefereeHardwareInit(&huart6); // 裁判系统初始化,会同时初始化UI
-
-        }
         if (chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE) { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
             DJIMotorStop(motor_lf);
             DJIMotorStop(motor_rf);
@@ -322,16 +316,17 @@ void ChassisTask()
                 chassis_cmd_recv.wz = 0;
                 break;
             case CHASSIS_FOLLOW_GIMBAL_YAW: // 跟随云台,不单独设置pid,以误差角度平方为速度输出
-                chassis_cmd_recv.wz = -chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle) * 4;
+                chassis_cmd_recv.wz = -chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle) * 10;
                 break;
             case CHASSIS_ROTATE: // 自旋,同时保持全向机动;当前wz维持定值,后续增加不规则的变速策略
                 if (rotate_num % 2 == 1)
                 {
-                    chassis_cmd_recv.offset_angle+=27;
+                    chassis_cmd_recv.offset_angle+=18
+                    ;
                     chassis_cmd_recv.wz = 4000;
                 }
                 else{
-                    chassis_cmd_recv.offset_angle-=27;
+                    chassis_cmd_recv.offset_angle-=18;
                     chassis_cmd_recv.wz = -4000;
                 }break;
             case CHASSIS_ZERO_FORCE:

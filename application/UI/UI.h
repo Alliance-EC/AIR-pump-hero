@@ -2,7 +2,46 @@
 #define UI_H
 
 #include "referee_UI.h"
-extern void MyUIInitOperate(void);
+typedef enum {
+    LINE=0,
+    Circle,
+    Retangle,
+    ARC,
+    OVAL,
+    INT_TYPE,
+    FLOAT_TYPE,
+} UI_type_e;
+typedef struct 
+{
+    Graph_Data_t UI_instantiation;
+    char name[3];
+    int8_t Color;
+    int8_t Layer;
+    int8_t Width;
+    int8_t Size;
+    UI_type_e TYPE;
+    int16_t coordinate_axis[4];
+    int16_t radius;
+    uint8_t init_flag;
+    int INT_NUM;
+    double DOUBLE_NUM;
+    /* data */
+}UI_Graph_Instance;
+typedef struct 
+{  
+    String_Data_t UI_instantiation;
+    char name[3];
+    int8_t Color;
+    int8_t Layer;
+    int8_t Width;
+    int8_t Size;
+    UI_type_e TYPE;
+    int16_t coordinate_axis[4];
+    int16_t radius;
+    /* data */
+}UI_Char_Instance;
+
+
 
 typedef struct
 {
@@ -21,9 +60,8 @@ typedef struct
     uint8_t Bullet_empty;
     //Shoot_Step Air_ready;
 }UIdate_for_change;
-extern Graph_Data_t line_fuzhu_one;
-extern Graph_Data_t line_fuzhu_two;
-extern Graph_Data_t line_fuzhu_three;
+extern UI_Graph_Instance *UI_LINE_Init(char Name[3], int8_t color, int8_t layer, int8_t width, int16_t startx, int16_t starty, int16_t endx, int16_t endy);
+extern void UI_DEBUG_MODE(uint8_t CNT,int px,int py);
 extern void MyUIInit(void);
 extern void MyUIRefresh(void);
 extern void get_referee_data(referee_info_t *referee_data);

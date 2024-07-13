@@ -17,26 +17,26 @@
 #include "stdint.h"
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
 // #define ONE_BOARD // 单板控制整车
-#define CHASSIS_BOARD //底盘板 
-// #define GIMBAL_BOARD  //云台板  
+// #define CHASSIS_BOARD ///底盘板 
+#define GIMBAL_BOARD  //云台板 
 #define TESTCODE
 #define VISION_USE_VCP // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 云台参数
-#define YAW_CHASSIS_ALIGN_ECD     6368 // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
+#define YAW_CHASSIS_ALIGN_ECD     6359 // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
 #define YAW_ECD_GREATER_THAN_4096 0    // ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度
 #define PITCH_HORIZON_ECD         400 // 云台处于水平位置时编码器值,若对云台有机械改动需要修改
 #define PITCH_MAX_ANGLE           0.76   // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
 #define PITCH_MIN_ANGLE           -0.34    // 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
-#define Fine_tuning_parameter     0.3
+#define Fine_tuning_parameter     0.04
 //将编码器转换成角度值
 
 #define YAW_ALIGN_ANGLE     (YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI) // 对齐时的角度,0-360
 #define PTICH_HORIZON_ANGLE (PITCH_HORIZON_ECD * ECD_ANGLE_COEF_DJI)     // pitch水平时电机的角度,0-360
 // 发射参数
-#define ONE_BULLET_DELTA_ANGLE 70    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
+#define ONE_BULLET_DELTA_ANGLE 1170    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
 #define REDUCTION_RATIO_LOADER 49.0f // 拨盘电机的减速比,英雄需要修改为3508的19.0f
 #define NUM_PER_CIRCLE         10    // 拨盘一圈的装载量
 #define Target_bullet_speed    15.7
@@ -49,11 +49,11 @@
 #define RADIUS_WHEEL           76.25f    // 轮子半径
 #define REDUCTION_RATIO_WHEEL  19.2f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换
 #define CHASSIS_MAX_SPEED 50000  //键鼠下的最大速度
-#define PRE_SPEED_UP 30 //每次增加的速度
+#define PRE_SPEED_UP 10 //每次增加的速度
 // 陀螺仪校准数据，开启陀螺仪校准后可从INS中获取
-#define BMI088_PRE_CALI_GYRO_X_OFFSET -0.00220665685
-#define BMI088_PRE_CALI_GYRO_Y_OFFSET 0.00124859624 
-#define BMI088_PRE_CALI_GYRO_Z_OFFSET 0.000518523972
+#define BMI088_PRE_CALI_GYRO_X_OFFSET -0.00241500558
+#define BMI088_PRE_CALI_GYRO_Y_OFFSET 0.000947082997
+#define BMI088_PRE_CALI_GYRO_Z_OFFSET 0.000608148694
 //陀螺仪默认环境温度
 #define BMI088_AMBIENT_TEMPERATURE 25.0f
 
@@ -142,9 +142,18 @@ typedef enum {
 } Fire_mode_e;
 
 typedef enum {
+    CAP_OFF =0 ,
+    CAP_ON,
+} CAP_mode_e;
+
+typedef enum {
     Follow_shoot=0,
     snipe,
 } Servo_Motor_mode_e;
+typedef enum {
+    DEBUG_MODE=0,
+    NORMAL_MODE,
+} UI_RUNNING_mode_e;
 // 功率限制,从裁判系统获取,是否有必要保留?
 typedef struct
 { // 功率控制

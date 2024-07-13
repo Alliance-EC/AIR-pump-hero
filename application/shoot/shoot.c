@@ -16,6 +16,7 @@ static DJIMotorInstance *friction_l, *friction_r, *loader; // 拨盘电机
 static Publisher_t *shoot_pub;
 Shoot_Ctrl_Cmd_s shoot_cmd_recv; // 来自cmd的发射控制信息
 static Subscriber_t *shoot_sub;
+static float loader_angle;
 Shoot_Upload_Data_s shoot_feedback_data; // 来自cmd的发射控制信息
 uint8_t Shoot_limit_for_oneshootPC6;
 uint8_t Shoot_limit_for_oneshootPE14;
@@ -81,9 +82,9 @@ void ShootInit()
             .angle_PID = {
                 // 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降
                 .Kp     = 20, // 10
-                .Ki     = 0,
+                .Ki     = 3,
                 .Kd     = 0,
-                .MaxOut = 2000,
+                .MaxOut = 8000,
             },
             .speed_PID = {
                 .Kp            = 4,
@@ -103,13 +104,16 @@ void ShootInit()
                 .MaxOut        = 5000,
 
             },
+            .other_angle_feedback_ptr = &(loader_angle),
         },
         .controller_setting_init_config = {
             .angle_feedback_source = MOTOR_FEED, .speed_feedback_source = MOTOR_FEED,
             .outer_loop_type    = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转
             .close_loop_type    = SPEED_LOOP | ANGLE_LOOP,
             .motor_reverse_flag = MOTOR_DIRECTION_REVERSE, // 注意方向设置为拨盘的拨出的击发方向
+
         },
+
         .motor_type = M3508 // 英雄使用m3508
     };
     loader = DJIMotorInit(&loader_config);
@@ -123,9 +127,9 @@ static int friction_speed = Inital_Friction_Speed;
 static int tick_num1      = 0;
 void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
 {
-    if (fabs(Now_verb_Of_load) <= (loader)->motor_controller.pid_ref / 200 && fabs(Last_verb_Of_load) <= (loader)->motor_controller.pid_ref / 200 && (loader)->motor_controller.pid_ref != 0) {
+    if (fabs(Last_verb_Of_load) <= (loader)->motor_controller.pid_ref / 20 && (loader)->motor_controller.pid_ref != 0) {
         tick_num1++;
-        if (tick_num1 >= 50) {
+        if (tick_num1 >= 10) {
             tick_num1  = 0;
             block_flag = 1;
         }
@@ -135,10 +139,12 @@ void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
     }
     Last_verb_Of_load = Now_verb_Of_load;
 }
-
+static int tick_block_time = 0;
+static uint8_t One_shoot_running;
 /* 机器人发射机构控制核心任务 */
 void ShootTask()
 {
+    loader_angle = loader->measure.total_angle;
 #ifdef ONE_BROAD
     SubGetMessage(shoot_sub, &shoot_cmd_recv);
 #endif // ONE_BORAD
@@ -148,70 +154,97 @@ void ShootTask()
     if (shoot_cmd_recv.Shoot_power) {
         // 从cmd获取控制数据
 
-        //block_shook_check(loader->measure.speed_aps);
+        // block_shook_check(loader->measure.speed_aps);
         if (block_flag) {
             DJIMotorSetRef(loader, -1000);
-            osDelay(200);
-        }
+            tick_block_time++;
+            if (tick_block_time >= 100000)
+                block_flag = 0;
+        } else
+            tick_block_time = 0;
         // 对shoot mode等于SHOOT_STOP的情况特殊处理,直接停止所有电机(紧急停止)
         if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
             DJIMotorStop(friction_l);
             DJIMotorStop(friction_r);
             DJIMotorStop(loader);
+            DJIMotorSetRef(loader, -loader->measure.total_angle );
         } else // 恢复运行
         {
             DJIMotorEnable(friction_l);
             DJIMotorEnable(friction_r);
+        
+        // if (Shoot_limit_for_oneshootPC6 == 1) {
+        //     One_Shoot_flag    = 0;
+        //     One_shoot_running = 0;
+        // }
+        // if (One_shoot_running == 1)
+        //     shoot_cmd_recv.load_mode = LOAD_1_BULLET;
+        // if (!block_flag) {
+            // switch (shoot_cmd_recv.load_mode) {
+            //     // 停止拨盘
+            //     case LOAD_STOP:
+            //         DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
+            //         DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
+            //         break;
+            //     // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
+            //     case LOAD_1_BULLET:
+            //         if ((One_Shoot_flag == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON && shoot_cmd_recv.rest_heat == 0) || One_shoot_running) {
+            //             DJIMotorOuterLoop(loader, SPEED_LOOP);
+            //             DJIMotorEnable(loader);
+            //             One_shoot_running = 1;
+            //             DJIMotorSetRef(loader, 5000); // 完成1发弹丸发射的时间
+            //         } else {
+            //             One_shoot_running = 0;
+            //             DJIMotorSetRef(loader, 0);
+            //         }
+
+            //         break;
+            //     case LOAD_MODE: // 装弹模式
+            //         if (Shoot_limit_for_oneshootPC6 == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON) {
+            //             DJIMotorOuterLoop(loader, SPEED_LOOP);
+            //             DJIMotorEnable(loader);
+            //             DJIMotorSetRef(loader, 5000);
+            //             // 完成1发弹丸发射的时间
+            //         } else {
+            //             One_Shoot_flag = 1;
+            //             DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
+            //             DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
+            //             DJIMotorStop(loader);
+            //         }
+            //         break;
+            //     case LOAD_BURSTFIRE:
+            //         if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+            //             DJIMotorOuterLoop(loader, SPEED_LOOP);
+            //             DJIMotorEnable(loader);
+            //             DJIMotorSetRef(loader, 8000);
+            //         }
+            //         break;
+            //     default:
+            //         break; // 未知模式,停止运行,检查指针越界,题
+            // }
+            
+            // }
             DJIMotorEnable(loader);
-        }
-        if (Shoot_limit_for_oneshootPC6 == 1) {
-            One_Shoot_flag = 0;
-        }
-        switch (shoot_cmd_recv.load_mode) {
-            // 停止拨盘
-            case LOAD_STOP:
-                DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
-                DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
-                break;
-            // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
-            case LOAD_1_BULLET:
-                if (One_Shoot_flag == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON&&shoot_cmd_recv.rest_heat==0) {
-                    DJIMotorOuterLoop(loader, SPEED_LOOP);
-                    DJIMotorSetRef(loader, 8000); // 完成1发弹丸发射的时间
-                } else {
-                    DJIMotorSetRef(loader, 0);
+            DJIMotorOuterLoop(loader, ANGLE_LOOP);
+            DJIMotorChangeFeed(loader, ANGLE_LOOP, OTHER_FEED);
+            if (shoot_cmd_recv.load_mode == LOAD_1_BULLET) {
+                if (One_Shoot_flag == 1) {
+                    DJIMotorSetRef(loader, -loader->measure.total_angle + ONE_BULLET_DELTA_ANGLE);
+                    One_Shoot_flag = 0;
                 }
 
-                break;
-            case LOAD_MODE: // 装弹模式
-                if (Shoot_limit_for_oneshootPC6 == 1 && shoot_cmd_recv.friction_mode == FRICTION_ON) {
-                    DJIMotorOuterLoop(loader, SPEED_LOOP);
-                    DJIMotorSetRef(loader, 4500);
-                     // 完成1发弹丸发射的时间
-                } else {
-                    One_Shoot_flag = 1;
-                    DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
-                    DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
-                }
-                break;
-            case LOAD_BURSTFIRE:
-            if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-                DJIMotorOuterLoop(loader, SPEED_LOOP);
-                DJIMotorSetRef(loader, 8000);
-            }
-            break;
-            default:
-                break; // 未知模式,停止运行,检查指针越界,题
+            } else if (shoot_cmd_recv.load_mode == LOAD_MODE) {
+                One_Shoot_flag = 1;
         }
         if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
             DJIMotorSetRef(friction_l, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
             DJIMotorSetRef(friction_r, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
         } else // 关闭摩擦轮
         {
-            DJIMotorSetRef(friction_l, -200);
-            DJIMotorSetRef(friction_r, -200);
+            DJIMotorSetRef(friction_l, -700);
+            DJIMotorSetRef(friction_r, -700);
         }
-
+    }
     } else {
         DJIMotorStop(friction_l);
         DJIMotorStop(friction_r);

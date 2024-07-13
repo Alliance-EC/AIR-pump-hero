@@ -107,171 +107,187 @@ static void CalcOffsetAngle()
 
 #ifdef TESTCODE
 static uint8_t UI_flag        = 1;
-static uint8_t One_shoot_flag = 1;
+static uint8_t One_shoot_flag = One_shoot_mdoe;
 uint8_t Super_flag            = 0;
 static uint16_t last_count_F;
 static uint16_t last_count_C;
+static uint16_t last_count_R;
 static uint16_t last_count_ctlrv;
 int maxspeed_chassis = CHASSIS_MAX_SPEED;
 static int Speed_vy, Speed_vx;
 static int Vx_A, Vy_A;
 static int friction_speed_adjust_ticknum;
 static uint8_t last_friction_mode;
-uint8_t referee_init_flag=0;
+UI_RUNNING_mode_e UI_MODE = NORMAL_MODE;
 static void MouseKeySet()
 {
-    if ((rc_data[TEMP].rc.switch_left == RC_SW_DOWN) && (rc_data[TEMP].rc.switch_right == RC_SW_DOWN)) {
-        chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
-        gimbal_cmd_send.gimbal_mode   = GIMBAL_ZERO_FORCE;
-        shoot_cmd_send.shoot_mode     = SHOOT_OFF;
-        shoot_cmd_send.friction_mode  = FRICTION_OFF;
-        shoot_cmd_send.load_mode      = LOAD_STOP;
-        return;
-    }
-    gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
-
-    if (!rc_data[TEMP].key[KEY_PRESS].ctrl) {
-        gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 1; // 系数待测
-        gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 20;
-        Vx_A                  = PRE_SPEED_UP * 2 * (abs(Speed_vx) / PRE_SPEED_UP) + PRE_SPEED_UP;
-        Vy_A                  = PRE_SPEED_UP * 2 * (abs(Speed_vy) / PRE_SPEED_UP) + PRE_SPEED_UP;
-        if (rc_data[TEMP].key[KEY_PRESS].w && !rc_data[TEMP].key[KEY_PRESS].s) {
-            Speed_vy += Vy_A;
-            if (Speed_vy > maxspeed_chassis)
-                Speed_vy = maxspeed_chassis;
-        } else if (!rc_data[TEMP].key[KEY_PRESS].w && rc_data[TEMP].key[KEY_PRESS].s) {
-            Speed_vy -= Vy_A;
-            if (Speed_vy < (-maxspeed_chassis))
-                Speed_vy = -maxspeed_chassis;
-        } else if (rc_data[TEMP].key[KEY_PRESS].w && rc_data[TEMP].key[KEY_PRESS].s) {
-            Speed_vy = 0;
-        } else if (Speed_vy != 0) {
-            if (Speed_vy > 0)
+    // if (rc_data[TEMP].key_count[KEY_PRESS_WITH_SHIFT][Key_B] % 2 == 0) {
+    //     UI_MODE = NORMAL_MODE;
+    // } else {
+    //     UI_MODE = DEBUG_MODE;
+    // }
+    if (UI_MODE == NORMAL_MODE) {
+        shoot_cmd_send.shoot_mode = SHOOT_ON;
+        if ((rc_data[TEMP].rc.switch_left == RC_SW_DOWN) && (rc_data[TEMP].rc.switch_right == RC_SW_DOWN)) {
+            chassis_cmd_send.chassis_mode = CHASSIS_ZERO_FORCE;
+            gimbal_cmd_send.gimbal_mode   = GIMBAL_ZERO_FORCE;
+            shoot_cmd_send.shoot_mode     = SHOOT_OFF;
+            shoot_cmd_send.friction_mode  = FRICTION_OFF;
+            shoot_cmd_send.load_mode      = LOAD_STOP;
+            return;
+        }
+        gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
+        shoot_cmd_send.shoot_mode   = SHOOT_ON;
+        if (chassis_cmd_send.chassis_mode == CHASSIS_ZERO_FORCE)
+            chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
+        if (!rc_data[TEMP].key[KEY_PRESS].ctrl) {
+            gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 0.05; // 系数待测
+            gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 1;
+            Vx_A                  = PRE_SPEED_UP * 2 * (abs(Speed_vx) / PRE_SPEED_UP) + PRE_SPEED_UP;
+            Vy_A                  = PRE_SPEED_UP * 2 * (abs(Speed_vy) / PRE_SPEED_UP) + PRE_SPEED_UP;
+            if (rc_data[TEMP].key[KEY_PRESS].w && !rc_data[TEMP].key[KEY_PRESS].s) {
+                Speed_vy += Vy_A;
+                if (Speed_vy > maxspeed_chassis)
+                    Speed_vy = maxspeed_chassis;
+            } else if (!rc_data[TEMP].key[KEY_PRESS].w && rc_data[TEMP].key[KEY_PRESS].s) {
+                Speed_vy -= Vy_A;
+                if (Speed_vy < (-maxspeed_chassis))
+                    Speed_vy = -maxspeed_chassis;
+            } else if (rc_data[TEMP].key[KEY_PRESS].w && rc_data[TEMP].key[KEY_PRESS].s) {
                 Speed_vy = 0;
-            else
-                Speed_vy = 0;
-            if (Speed_vy < 1000 && Speed_vy > -1000)
-                Speed_vy = 0;
-        }
-        if (rc_data[TEMP].key[KEY_PRESS].a && !rc_data[TEMP].key[KEY_PRESS].d) {
-            Speed_vx += Vx_A;
-            if (Speed_vx > maxspeed_chassis)
-                Speed_vx = maxspeed_chassis;
-        } else if (!rc_data[TEMP].key[KEY_PRESS].a && rc_data[TEMP].key[KEY_PRESS].d) {
-            Speed_vx -= Vx_A;
-            if (Speed_vx < (-maxspeed_chassis))
-                Speed_vx = -maxspeed_chassis;
-        } else if (rc_data[TEMP].key[KEY_PRESS].a && rc_data[TEMP].key[KEY_PRESS].d) {
-            Speed_vx = 0;
-        } else if (Speed_vx != 0) {
-            if (Speed_vx > 0)
-                Speed_vx = 0;
-            else
-                Speed_vx = 0;
-            if (Speed_vx < 1000 && Speed_vx > -1000)
-                Speed_vx = 0;
-        }
-        chassis_cmd_send.vy = Speed_vy;
-        chassis_cmd_send.vx = Speed_vx;
-    } else {
-        if (rc_data[TEMP].key[KEY_PRESS].w) {
-            gimbal_cmd_send.pitch = Fine_tuning_parameter / 3;
-        }
-        if (rc_data[TEMP].key[KEY_PRESS].s) {
-            gimbal_cmd_send.pitch = -Fine_tuning_parameter / 3;
-        }
-        if (rc_data[TEMP].key[KEY_PRESS].a) {
-            gimbal_cmd_send.yaw = Fine_tuning_parameter / 250;
-        }
-        if (rc_data[TEMP].key[KEY_PRESS].d) {
-            gimbal_cmd_send.yaw = -Fine_tuning_parameter / 250;
-        }
-        if (!rc_data[TEMP].key[KEY_PRESS].w && !rc_data[TEMP].key[KEY_PRESS].s)
-            gimbal_cmd_send.pitch = 0;
-        if (!rc_data[TEMP].key[KEY_PRESS].a && !rc_data[TEMP].key[KEY_PRESS].d)
-            gimbal_cmd_send.yaw = 0;
-        chassis_cmd_send.vy = 0;
-        chassis_cmd_send.vx = 0;
-        Speed_vy            = 0;
-        Speed_vx            = 0;
-    }
-    if (rc_data[TEMP].key[KEY_PRESS].b == 1) {
-        UI_flag        = 1;
-        UI_flag_second = 0;
-    }
-    if (rc_data[TEMP].key[KEY_PRESS].shift == 1) {
-        Super_flag = 1;
-    } else {
-        Super_flag = 0;
-    }
-    if (last_count_ctlrv != rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_V]) // V键开启摩擦轮
-    {
-        if (last_friction_mode == FRICTION_ON)
-            shoot_cmd_send.friction_mode = FRICTION_OFF;
-        else
-            shoot_cmd_send.friction_mode = FRICTION_ON;
-    }
-    if (rc_data[TEMP].key_count[KEY_PRESS][Key_R] % 2 == 0) {
-        One_shoot_flag = 1;
-    } else {
-        One_shoot_flag = 0;
-    }
-    if (rc_data[TEMP].key[KEY_PRESS_WITH_CTRL].r  == 1&&rc_data[TEMP].key[KEY_PRESS_WITH_SHIFT].r  == 1) {
-        referee_init_flag=1;
-    }
-    else referee_init_flag=0;
-    switch (rc_data[TEMP].mouse.press_l) {
-        case 1:
-            if (shoot_cmd_send.friction_mode == FRICTION_ON) {
-                if (One_shoot_flag)
-                    shoot_cmd_send.load_mode = LOAD_1_BULLET;
+            } else if (Speed_vy != 0) {
+                if (Speed_vy > 0)
+                    Speed_vy = 0;
                 else
-                    shoot_cmd_send.load_mode = LOAD_BURSTFIRE;
+                    Speed_vy = 0;
+                if (Speed_vy < 1000 && Speed_vy > -1000)
+                    Speed_vy = 0;
             }
-            break;
-        case 0:
-            shoot_cmd_send.load_mode = LOAD_MODE;
-            break;
-    }
-
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q] % 2) {
-        case 1:
-            gimbal_cmd_send.sight_mode = SIGHT_ON;
-            break;
-        case 0:
-            gimbal_cmd_send.sight_mode = SIGHT_OFF;
-            break;
-    }
-
-    switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E] % 2) {
-        case 1:
-            gimbal_cmd_send.image_mode = snipe;
-            break;
-        case 0:
-            gimbal_cmd_send.image_mode = Follow_shoot;
-            break;
-    }
-
-    if (last_count_F != rc_data[TEMP].key_count[KEY_PRESS][Key_F]) // 云台自由模式
-    {
-        if (chassis_cmd_send.chassis_mode == CHASSIS_NO_FOLLOW) {
-            chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
+            if (rc_data[TEMP].key[KEY_PRESS].a && !rc_data[TEMP].key[KEY_PRESS].d) {
+                Speed_vx += Vx_A;
+                if (Speed_vx > maxspeed_chassis)
+                    Speed_vx = maxspeed_chassis;
+            } else if (!rc_data[TEMP].key[KEY_PRESS].a && rc_data[TEMP].key[KEY_PRESS].d) {
+                Speed_vx -= Vx_A;
+                if (Speed_vx < (-maxspeed_chassis))
+                    Speed_vx = -maxspeed_chassis;
+            } else if (rc_data[TEMP].key[KEY_PRESS].a && rc_data[TEMP].key[KEY_PRESS].d) {
+                Speed_vx = 0;
+            } else if (Speed_vx != 0) {
+                if (Speed_vx > 0)
+                    Speed_vx = 0;
+                else
+                    Speed_vx = 0;
+                if (Speed_vx < 1000 && Speed_vx > -1000)
+                    Speed_vx = 0;
+            }
+            chassis_cmd_send.vy = Speed_vy;
+            chassis_cmd_send.vx = Speed_vx;
         } else {
-            chassis_cmd_send.chassis_mode = CHASSIS_NO_FOLLOW;
+            if (rc_data[TEMP].key[KEY_PRESS].w) {
+                gimbal_cmd_send.pitch = Fine_tuning_parameter / 3;
+            }
+            if (rc_data[TEMP].key[KEY_PRESS].s) {
+                gimbal_cmd_send.pitch = -Fine_tuning_parameter / 3;
+            }
+            if (rc_data[TEMP].key[KEY_PRESS].a) {
+                gimbal_cmd_send.yaw = Fine_tuning_parameter / 250;
+            }
+            if (rc_data[TEMP].key[KEY_PRESS].d) {
+                gimbal_cmd_send.yaw = -Fine_tuning_parameter / 250;
+            }
+            if (!rc_data[TEMP].key[KEY_PRESS].w && !rc_data[TEMP].key[KEY_PRESS].s)
+                gimbal_cmd_send.pitch = 0;
+            if (!rc_data[TEMP].key[KEY_PRESS].a && !rc_data[TEMP].key[KEY_PRESS].d)
+                gimbal_cmd_send.yaw = 0;
+            chassis_cmd_send.vy = 0;
+            chassis_cmd_send.vx = 0;
+            Speed_vy            = 0;
+            Speed_vx            = 0;
         }
-    }
-
-    if (last_count_C != rc_data[TEMP].key_count[KEY_PRESS][Key_C]) // 小陀螺
-    {
-        if (chassis_cmd_send.chassis_mode == CHASSIS_ROTATE) {
-            chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
+        if (rc_data[TEMP].key[KEY_PRESS].b == 1) {
+            UI_flag        = 1;
+            UI_flag_second = 0;
+        }
+        if (rc_data[TEMP].key[KEY_PRESS].shift == 1) {
+            Super_flag = CAP_ON;
         } else {
-            chassis_cmd_send.chassis_mode = CHASSIS_ROTATE;
+            Super_flag = CAP_OFF;
         }
+        if (last_count_ctlrv != rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_V]) // V键开启摩擦轮
+        {
+            if (last_friction_mode == FRICTION_ON)
+                shoot_cmd_send.friction_mode = FRICTION_OFF;
+            else
+                shoot_cmd_send.friction_mode = FRICTION_ON;
+        }
+        if (last_count_R != rc_data[TEMP].key_count[KEY_PRESS][Key_R]) {
+            if (One_shoot_flag == One_shoot_mdoe)
+                One_shoot_flag = BiuBiuBiu;
+            else
+                One_shoot_flag = One_shoot_mdoe;
+        }
+        if (rc_data[TEMP].key[KEY_PRESS_WITH_CTRL].r == 1 && rc_data[TEMP].key[KEY_PRESS_WITH_SHIFT].r == 1) {
+            // 关闭所有中断
+            __set_FAULTMASK(1);
+            // 复位
+            NVIC_SystemReset();
+        }
+
+        switch (rc_data[TEMP].mouse.press_l) {
+            case 1:
+                if (shoot_cmd_send.friction_mode == FRICTION_ON) {
+                    if (One_shoot_flag)
+                        shoot_cmd_send.load_mode = LOAD_1_BULLET;
+                    else
+                        shoot_cmd_send.load_mode = LOAD_BURSTFIRE;
+                }
+                break;
+            case 0:
+                shoot_cmd_send.load_mode = LOAD_MODE;
+                break;
+        }
+
+        switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Q] % 2) {
+            case 1:
+                gimbal_cmd_send.sight_mode = SIGHT_ON;
+                break;
+            case 0:
+                gimbal_cmd_send.sight_mode = SIGHT_OFF;
+                break;
+        }
+
+        switch (rc_data[TEMP].key_count[KEY_PRESS][Key_E] % 2) {
+            case 1:
+                gimbal_cmd_send.image_mode = snipe;
+                break;
+            case 0:
+                gimbal_cmd_send.image_mode = Follow_shoot;
+                break;
+        }
+
+        if (last_count_F != rc_data[TEMP].key_count[KEY_PRESS][Key_F]) // 云台自由模式
+        {
+            if (chassis_cmd_send.chassis_mode == CHASSIS_NO_FOLLOW) {
+                chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
+            } else {
+                chassis_cmd_send.chassis_mode = CHASSIS_NO_FOLLOW;
+            }
+        }
+
+        if (last_count_C != rc_data[TEMP].key_count[KEY_PRESS][Key_C]) // 小陀螺
+        {
+            if (chassis_cmd_send.chassis_mode == CHASSIS_ROTATE) {
+                chassis_cmd_send.chassis_mode = CHASSIS_FOLLOW_GIMBAL_YAW;
+            } else {
+                chassis_cmd_send.chassis_mode = CHASSIS_ROTATE;
+            }
+        }
+        last_count_R                  = rc_data[TEMP].key_count[KEY_PRESS][Key_R];
+        last_count_C                  = rc_data[TEMP].key_count[KEY_PRESS][Key_C];
+        last_count_F                  = rc_data[TEMP].key_count[KEY_PRESS][Key_F];
+        friction_speed_adjust_ticknum = rc_data[TEMP].key_count[KEY_PRESS][Key_X] - rc_data[TEMP].key_count[KEY_PRESS][Key_Z];
     }
-    last_count_C                  = rc_data[TEMP].key_count[KEY_PRESS][Key_C];
-    last_count_F                  = rc_data[TEMP].key_count[KEY_PRESS][Key_F];
-    friction_speed_adjust_ticknum = rc_data[TEMP].key_count[KEY_PRESS][Key_X] - rc_data[TEMP].key_count[KEY_PRESS][Key_Z];
 }
 
 static void RemoteControlSet()
@@ -361,22 +377,27 @@ static void RemoteControlSet()
 
 void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
 {
-    UI_data.Bullet_ready  = shoot_fetch_data.Bullet_ready;
-    UI_data.All_robot_HP  = referee_data.GameRobotHP;
-    UI_data.pitch_data    = gimbal_fetch_data.Pitch_data;
-    UI_data.fri_mode      = shoot_cmd_send.friction_mode;
-    UI_data.chassis_mode  = chassis_cmd_send.chassis_mode;
-    UI_data.remain_HP     = referee_data.GameRobotState.remain_HP;
-    UI_data.load_Mode     = One_shoot_flag;
-    UI_data.Max_HP        = referee_data.GameRobotState.max_HP;
-    UI_data.Angle         = chassis_cmd_send.offset_angle;
-    UI_data.CapVot        = cap_UI.cap_msg_s.CapVot;
+    UI_data.Bullet_ready = shoot_fetch_data.Bullet_ready;
+    UI_data.All_robot_HP = referee_data.GameRobotHP;
+    UI_data.pitch_data   = gimbal_fetch_data.Pitch_data;
+    UI_data.fri_mode     = shoot_cmd_send.friction_mode;
+    UI_data.chassis_mode = chassis_cmd_send.chassis_mode;
+    UI_data.remain_HP    = referee_data.GameRobotState.remain_HP;
+    UI_data.load_Mode    = One_shoot_flag;
+    UI_data.Max_HP       = referee_data.GameRobotState.max_HP;
+    UI_data.Angle        = chassis_cmd_send.offset_angle;
+    UI_data.CapVot       = cap_UI.cap_msg_s.CapVot;
+    static int double_to_int;
+    double_to_int         = UI_data.CapVot * 10;
+    UI_data.CapVot        = double_to_int;
+    double_to_int         = UI_data.pitch_data * 10;
+    UI_data.pitch_data    = double_to_int;
     UI_data.Frition_speed = (Inital_Friction_Speed + 100 * (friction_speed_adjust_ticknum)) % 10000;
     if (referee_data.PowerHeatData.shooter_42mm_barrel_heat + 100 > referee_data.GameRobotState.shooter_cooling_limit)
         UI_data.Shoot_enemy = 1;
     else
         UI_data.Shoot_enemy = 0;
-    if (referee_data.Allowance_bullet.projectile_allowance_42mm <= 2)
+    if (referee_data.Allowance_bullet.projectile_allowance_42mm <= 2 || referee_data.Allowance_bullet.projectile_allowance_42mm >= 100)
         UI_data.Bullet_empty = 1;
     else
         UI_data.Bullet_empty = 0;
@@ -446,8 +467,12 @@ void NewUItask1(void *argument)
     /* USER CODE BEGIN UItask */
     /* Infinite loop */
     for (;;) {
-        Change_UI_Data(&UI_data);
-        MyUIInit();
+        if (UI_MODE == DEBUG_MODE) {
+            UI_DEBUG_MODE(rc_data[TEMP].key_count[KEY_PRESS][Key_B] % 3, rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_X] - rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_Z], rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_E] - rc_data[TEMP].key_count[KEY_PRESS_WITH_CTRL][Key_Q]);
+        } else {
+            Change_UI_Data(&UI_data);
+            MyUIInit();
+        }
         osDelay(10);
     }
     /* USER CODE END UItask */

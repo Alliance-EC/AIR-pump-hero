@@ -32,8 +32,8 @@ Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 // 仅供云台内部函数使用
 static void GimbalInputGet()
 {
-    yaw_input += gimbal_cmd_recv.yaw / 3.0f;
-    pitch_input += gimbal_cmd_recv.pitch / 200;
+    yaw_input += gimbal_cmd_recv.yaw ;
+    pitch_input += gimbal_cmd_recv.pitch/50 ;
     if (pitch_input > PITCH_MAX_ANGLE)
         pitch_input = PITCH_MAX_ANGLE;
     if (pitch_input < PITCH_MIN_ANGLE)
@@ -144,7 +144,7 @@ void GimbalInit()
         },
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp            = 10, // 10
+                .Kp            = 13, // 10
                 .Ki            = 0,
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
@@ -152,7 +152,7 @@ void GimbalInit()
                 .MaxOut        = 500,
             },
             .speed_PID = {
-                .Kp            = 14000, // 50
+                .Kp            = 20000, // 50
                 .Ki            = 2,     // 350
                 .Kd            = 0,     // 0
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
@@ -211,7 +211,7 @@ void GimbalTask()
             Servo_Motor_FreeAngle_Set(sight_module, 15);
             break;
     } // 望远镜舵机控制                        // DEBUG
-    Servo_Motor_FreeAngle_Set(image_module, 58);
+    Servo_Motor_FreeAngle_Set(image_module, 59);
     if (gimbal_cmd_recv.Gimbal_power) { // 云台上电才会施行该任务
 
         // switch (gimbal_cmd_recv.image_mode) {
