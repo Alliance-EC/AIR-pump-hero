@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 /* 对于双发射机构的机器人,将下面的数据封装成结构体即可,生成两份shoot应用实例 */
-static DJIMotorInstance *friction_l, *friction_r, *loader; // 拨盘电机
+static DJIMotorInstance *friction_fl, *friction_fr, *friction_bl, *friction_br, *loader; // 拨盘电机
 // static servo_instance *lid; 需要增加弹舱盖
 
 static Publisher_t *shoot_pub;
@@ -65,12 +65,16 @@ void ShootInit()
             .motor_reverse_flag = MOTOR_DIRECTION_REVERSE,
         },
         .motor_type = M3508};
-    friction_config.can_init_config.tx_id = 7;
-    friction_l                            = DJIMotorInit(&friction_config);
-
-    friction_config.can_init_config.tx_id                             = 8; // 右摩擦轮,改txid和方向就行
+    friction_config.can_init_config.tx_id                             = 7;
+    friction_fl                                                       = DJIMotorInit(&friction_config); // 前左
+    friction_config.can_init_config.tx_id                             = 6;
+    friction_bl                                                       = DJIMotorInit(&friction_config); // 后左
+    friction_config.can_init_config.tx_id                             = 8;
     friction_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
-    friction_r                                                        = DJIMotorInit(&friction_config);
+    friction_fr                                                       = DJIMotorInit(&friction_config); // 前右
+
+    friction_config.can_init_config.tx_id = 5;
+    friction_br                           = DJIMotorInit(&friction_config); // 后右
 
     // 拨盘电机
     Motor_Init_Config_s loader_config = {
@@ -164,22 +168,25 @@ void ShootTask()
             tick_block_time = 0;
         // 对shoot mode等于SHOOT_STOP的情况特殊处理,直接停止所有电机(紧急停止)
         if (shoot_cmd_recv.shoot_mode == SHOOT_OFF) {
-            DJIMotorStop(friction_l);
-            DJIMotorStop(friction_r);
+            DJIMotorStop(friction_bl);
+            DJIMotorStop(friction_br);
+            DJIMotorStop(friction_fl);
+            DJIMotorStop(friction_fr);
             DJIMotorStop(loader);
-            DJIMotorSetRef(loader, -loader->measure.total_angle );
+            DJIMotorSetRef(loader, -loader->measure.total_angle);
         } else // 恢复运行
         {
-            DJIMotorEnable(friction_l);
-            DJIMotorEnable(friction_r);
-        
-        // if (Shoot_limit_for_oneshootPC6 == 1) {
-        //     One_Shoot_flag    = 0;
-        //     One_shoot_running = 0;
-        // }
-        // if (One_shoot_running == 1)
-        //     shoot_cmd_recv.load_mode = LOAD_1_BULLET;
-        // if (!block_flag) {
+            DJIMotorEnable(friction_bl);
+            DJIMotorEnable(friction_br);
+            DJIMotorEnable(friction_fl);
+            DJIMotorEnable(friction_fr);
+            // if (Shoot_limit_for_oneshootPC6 == 1) {
+            //     One_Shoot_flag    = 0;
+            //     One_shoot_running = 0;
+            // }
+            // if (One_shoot_running == 1)
+            //     shoot_cmd_recv.load_mode = LOAD_1_BULLET;
+            // if (!block_flag) {
             // switch (shoot_cmd_recv.load_mode) {
             //     // 停止拨盘
             //     case LOAD_STOP:
@@ -222,7 +229,7 @@ void ShootTask()
             //     default:
             //         break; // 未知模式,停止运行,检查指针越界,题
             // }
-            
+
             // }
             DJIMotorEnable(loader);
             DJIMotorOuterLoop(loader, ANGLE_LOOP);
@@ -235,19 +242,21 @@ void ShootTask()
 
             } else if (shoot_cmd_recv.load_mode == LOAD_MODE) {
                 One_Shoot_flag = 1;
+            }
+            if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+                DJIMotorSetRef(friction_fl, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
+                DJIMotorSetRef(friction_fr, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
+            } else // 关闭摩擦轮
+            {
+                DJIMotorSetRef(friction_bl, -700);
+                DJIMotorSetRef(friction_br, -700);
+            }
         }
-        if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-            DJIMotorSetRef(friction_l, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
-            DJIMotorSetRef(friction_r, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
-        } else // 关闭摩擦轮
-        {
-            DJIMotorSetRef(friction_l, -700);
-            DJIMotorSetRef(friction_r, -700);
-        }
-    }
     } else {
-        DJIMotorStop(friction_l);
-        DJIMotorStop(friction_r);
+        DJIMotorStop(friction_bl);
+        DJIMotorStop(friction_br);
+        DJIMotorStop(friction_fl);
+        DJIMotorStop(friction_fr);
         DJIMotorStop(loader);
     }
 #ifdef ONE_BROAD
