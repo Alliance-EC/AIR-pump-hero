@@ -237,7 +237,7 @@ static void MouseKeySet()
         switch (rc_data[TEMP].mouse.press_l) {
             case 1:
                 if (shoot_cmd_send.friction_mode == FRICTION_ON) {
-                    if (One_shoot_flag)
+                    if (One_shoot_flag==One_shoot_mdoe)
                         shoot_cmd_send.load_mode = LOAD_1_BULLET;
                     else
                         shoot_cmd_send.load_mode = LOAD_BURSTFIRE;

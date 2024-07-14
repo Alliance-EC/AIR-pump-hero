@@ -20,7 +20,8 @@ static float loader_angle;
 Shoot_Upload_Data_s shoot_feedback_data; // 来自cmd的发射控制信息
 uint8_t Shoot_limit_for_oneshootPC6;
 uint8_t Shoot_limit_for_oneshootPE14;
-uint8_t One_Shoot_flag;
+static uint8_t One_Shoot_flag;
+static uint8_t One_load_flag;
 #ifdef SAMPLING
 uint8_t *flag_complete;
 float *flag_frequnency_now;
@@ -84,7 +85,7 @@ void ShootInit()
                 .Kp     = 20, // 10
                 .Ki     = 3,
                 .Kd     = 0,
-                .MaxOut = 8000,
+                .MaxOut = 10000,
             },
             .speed_PID = {
                 .Kp            = 4,
@@ -92,7 +93,7 @@ void ShootInit()
                 .Kd            = 0,
                 .Improve       = PID_Integral_Limit,
                 .IntegralLimit = 5000,
-                .MaxOut        = 20000,
+                .MaxOut        = 16384,
 
             },
             .current_PID = {
@@ -141,6 +142,7 @@ void block_shook_check(float Now_verb_Of_load) // 堵转检测函数
 }
 static int tick_block_time = 0;
 static uint8_t One_shoot_running;
+int bullet_num;
 /* 机器人发射机构控制核心任务 */
 void ShootTask()
 {
@@ -167,19 +169,19 @@ void ShootTask()
             DJIMotorStop(friction_l);
             DJIMotorStop(friction_r);
             DJIMotorStop(loader);
-            DJIMotorSetRef(loader, -loader->measure.total_angle );
+            DJIMotorSetRef(loader, -loader->measure.total_angle);
         } else // 恢复运行
         {
             DJIMotorEnable(friction_l);
             DJIMotorEnable(friction_r);
-        
-        // if (Shoot_limit_for_oneshootPC6 == 1) {
-        //     One_Shoot_flag    = 0;
-        //     One_shoot_running = 0;
-        // }
-        // if (One_shoot_running == 1)
-        //     shoot_cmd_recv.load_mode = LOAD_1_BULLET;
-        // if (!block_flag) {
+
+            // if (Shoot_limit_for_oneshootPC6 == 1) {
+            //     One_Shoot_flag    = 0;
+            //     One_shoot_running = 0;
+            // }
+            // if (One_shoot_running == 1)
+            //     shoot_cmd_recv.load_mode = LOAD_1_BULLET;
+            // if (!block_flag) {
             // switch (shoot_cmd_recv.load_mode) {
             //     // 停止拨盘
             //     case LOAD_STOP:
@@ -222,29 +224,61 @@ void ShootTask()
             //     default:
             //         break; // 未知模式,停止运行,检查指针越界,题
             // }
-            
-            // }
-            DJIMotorEnable(loader);
-            DJIMotorOuterLoop(loader, ANGLE_LOOP);
-            DJIMotorChangeFeed(loader, ANGLE_LOOP, OTHER_FEED);
-            if (shoot_cmd_recv.load_mode == LOAD_1_BULLET) {
-                if (One_Shoot_flag == 1) {
-                    DJIMotorSetRef(loader, -loader->measure.total_angle + ONE_BULLET_DELTA_ANGLE);
-                    One_Shoot_flag = 0;
-                }
 
-            } else if (shoot_cmd_recv.load_mode == LOAD_MODE) {
-                One_Shoot_flag = 1;
+            // }
+            if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+                switch (shoot_cmd_recv.load_mode) {
+                    // 停止拨盘
+                    case LOAD_STOP:
+                        DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
+                        DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
+                        break;
+                    // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
+                    case LOAD_1_BULLET:
+                        One_load_flag = 1;
+                        if (One_Shoot_flag == 1&& shoot_cmd_recv.rest_heat == 0) {
+                            bullet_num++;
+                            DJIMotorEnable(loader);
+                            DJIMotorOuterLoop(loader, ANGLE_LOOP);
+                            DJIMotorChangeFeed(loader, ANGLE_LOOP, OTHER_FEED);
+                            DJIMotorSetRef(loader, ONE_BULLET_DELTA_ANGLE * bullet_num);
+                            One_Shoot_flag = 0;
+                        }
+
+                        break;
+                    case LOAD_MODE: // 装弹模式
+                        One_Shoot_flag = 1;
+                        if (One_load_flag == 1) {
+                            // DJIMotorEnable(loader);
+                            // DJIMotorOuterLoop(loader, ANGLE_LOOP);
+                            // DJIMotorChangeFeed(loader, ANGLE_LOOP, OTHER_FEED);
+                            One_load_flag = 0;
+                            // DJIMotorSetRef(loader, -loader->measure.total_angle + LOAD_ANGLE);
+                        }
+                        break;
+                    case LOAD_BURSTFIRE:
+                        if (One_Shoot_flag == 1) {
+                            bullet_num++;
+                            DJIMotorEnable(loader);
+                            DJIMotorOuterLoop(loader, ANGLE_LOOP);
+                            DJIMotorChangeFeed(loader, ANGLE_LOOP, OTHER_FEED);
+                            DJIMotorSetRef(loader, ONE_BULLET_DELTA_ANGLE * bullet_num);
+                            One_Shoot_flag = 0;
+                        }
+                        break;
+                    default:
+                        break; // 未知模式,停止运行,检查指针越界,题
+                } // 角度环节控制模式
+            }
+            if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+                DJIMotorSetRef(friction_l, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
+                DJIMotorSetRef(friction_r, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
+            } else // 关闭摩擦轮
+            {
+                DJIMotorSetRef(friction_l, -700);
+                DJIMotorSetRef(friction_r, -700);
+            }
         }
-        if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
-            DJIMotorSetRef(friction_l, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
-            DJIMotorSetRef(friction_r, friction_speed + shoot_cmd_recv.friction_speed_adjust * 100);
-        } else // 关闭摩擦轮
-        {
-            DJIMotorSetRef(friction_l, -700);
-            DJIMotorSetRef(friction_r, -700);
-        }
-    }
     } else {
         DJIMotorStop(friction_l);
         DJIMotorStop(friction_r);

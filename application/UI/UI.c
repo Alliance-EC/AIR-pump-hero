@@ -313,7 +313,11 @@ void MyUIRefresh(void)
     // UICharDraw(&rotate_mode, "003", Graphic_Operate_DEL, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
     // UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_DEL, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_Now->CapVot * 1000);
     // UIFloatDraw(&Pitch_angle, "PTD", Graphic_Operate_DEL, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, UI_Now->pitch_data * 1000);
-    if (UI_Now->load_Mode == 1) {
+    if (UI_Now->load_Mode == One_shoot_mdoe
+    
+    
+    
+    ) {
         sprintf(Load_moad.show_Data, "ONE_SHOOT");
         UICharDraw(&Load_moad, "LDM", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 + 300, SCREEN_WIDTH / 2 + 200, char_pitch);
 
