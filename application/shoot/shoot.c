@@ -283,6 +283,7 @@ void ShootTask()
         DJIMotorStop(friction_l);
         DJIMotorStop(friction_r);
         DJIMotorStop(loader);
+        bullet_num=0;
     }
 #ifdef ONE_BROAD
     PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
