@@ -1,6 +1,5 @@
 #include "motor_task.h"
 #include "LKmotor.h"
-#include "DRmotor.h"
 #include "HT04.h"
 #include "dji_motor.h"
 #include "dji_motor.h"
@@ -14,7 +13,7 @@ void MotorControlTask()
     if(cnt%2==0)
     {
         LKMotorControl();
-        DRMotorControl();  
+        //DRMotorControl();  
     }
     DJIMotorControl();
      
