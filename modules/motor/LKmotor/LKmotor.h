@@ -1,5 +1,5 @@
-#ifndef LK9025_H
-#define LK9025_H
+#ifndef LKmotor_H
+#define LKmotor_H
 
 #include "stdint.h"
 #include "bsp_can.h"
@@ -14,13 +14,15 @@
 #define CURRENT_SMOOTH_COEF 0.9f
 #define SPEED_SMOOTH_COEF 0.85f
 #define REDUCTION_RATIO_DRIVEN 1
-#define ECD_ANGLE_COEF_LK (360.0f / 65536.0f)
+// #define ECD_ANGLE_COEF_LK (360.0f / 65536.0f)
 #define CURRENT_TORQUE_COEF_LK 0.003645f // 电流设定值转换成扭矩的系数,算出来的设定值除以这个系数就是扭矩值
 
-typedef struct // 9025
+typedef struct
 {
     uint16_t last_ecd;        // 上一次读取的编码器值
     uint16_t ecd;             // 当前编码器值
+    uint16_t max_ecd;         // 编码器数值范围（MS5005与LK9025的回复报文中仅编码器精确度不同）
+
     float angle_single_round; // 单圈角度
     float speed_rads;         // speed rad/s
     int16_t real_current;     // 实际电流
@@ -54,6 +56,11 @@ typedef struct
 
     DaemonInstance *daemon;
 
+    Motor_Type_e motor_type;        // 电机类型
+
+    Motor_Contro_Type_e motor_contro_type;  //控制类型
+
+    uint8_t recv_data; // 接收数据标志位
 } LKMotorInstance;
 
 /**
@@ -95,4 +102,4 @@ void LKMotorEnable(LKMotorInstance *motor);
 
 uint8_t LKMotorIsOnline(LKMotorInstance *motor);
 
-#endif // LK9025_H
+#endif // LKmotor_H
