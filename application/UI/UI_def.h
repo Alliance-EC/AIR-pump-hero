@@ -46,7 +46,7 @@
 #define Center_bullet_worry_Y (SCREEN_WIDTH/2)
 
 #define Center_outpose_firstX   (SCREEN_LENGTH/2-40)
-#define Center_outpose_firstY   (SCREEN_WIDTH/2+70)
+#define Center_outpose_firstY   (640)
 
 #define Center_base_7m_X   (947)
 #define Center_base_7m_Y   (605)
@@ -54,4 +54,6 @@
 #define Center_base_20m_X   (SCREEN_LENGTH/2-40)
 #define Center_base_20m_Y   (SCREEN_WIDTH/2+70)
 
+#define Max_Power_X 300
+#define Max_Power_Y 760
 #endif

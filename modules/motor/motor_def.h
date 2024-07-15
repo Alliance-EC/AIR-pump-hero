@@ -160,6 +160,7 @@ typedef enum
     M3508,
     M2006,
     LK9025,
+    LK5010E,
     HT04,
     LK_MS5005,
     DR_PDA04,

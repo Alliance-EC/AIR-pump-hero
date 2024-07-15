@@ -82,8 +82,9 @@ void ShootInit()
         .controller_param_init_config = {
             .angle_PID = {
                 // 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降
-                .Kp     = 20, // 10
-                .Ki     = 3,
+                .Kp     = 30, // 10
+                .Ki     = 0,
+
                 .Kd     = 0,
                 .MaxOut = 10000,
             },
@@ -227,6 +228,9 @@ void ShootTask()
 
             // }
             if (shoot_cmd_recv.friction_mode == FRICTION_ON) {
+                if(abs(abs(loader->measure.total_angle)-abs(loader->motor_controller.pid_ref))<200)
+                One_shoot_running=1;
+                
                 switch (shoot_cmd_recv.load_mode) {
                     // 停止拨盘
                     case LOAD_STOP:
@@ -236,24 +240,21 @@ void ShootTask()
                     // 单发模式,根据鼠标按下的时间,触发一次之后需要进入不响应输入的状态(否则按下的时间内可能多次进入,导致多次发射)
                     case LOAD_1_BULLET:
                         One_load_flag = 1;
-                        if (One_Shoot_flag == 1&& shoot_cmd_recv.rest_heat == 0) {
+                        if (One_Shoot_flag == 1&& shoot_cmd_recv.rest_heat == 0&&One_shoot_running) {
                             bullet_num++;
                             DJIMotorEnable(loader);
                             DJIMotorOuterLoop(loader, ANGLE_LOOP);
                             DJIMotorChangeFeed(loader, ANGLE_LOOP, OTHER_FEED);
                             DJIMotorSetRef(loader, ONE_BULLET_DELTA_ANGLE * bullet_num);
                             One_Shoot_flag = 0;
+                            One_shoot_running=0;
                         }
 
                         break;
                     case LOAD_MODE: // 装弹模式
                         One_Shoot_flag = 1;
                         if (One_load_flag == 1) {
-                            // DJIMotorEnable(loader);
-                            // DJIMotorOuterLoop(loader, ANGLE_LOOP);
-                            // DJIMotorChangeFeed(loader, ANGLE_LOOP, OTHER_FEED);
                             One_load_flag = 0;
-                            // DJIMotorSetRef(loader, -loader->measure.total_angle + LOAD_ANGLE);
                         }
                         break;
                     case LOAD_BURSTFIRE:
@@ -283,7 +284,7 @@ void ShootTask()
         DJIMotorStop(friction_l);
         DJIMotorStop(friction_r);
         DJIMotorStop(loader);
-        bullet_num=0;
+        // bullet_num=0;
     }
 #ifdef ONE_BROAD
     PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);

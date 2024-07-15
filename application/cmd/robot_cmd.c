@@ -143,8 +143,8 @@ static void MouseKeySet()
         if (!rc_data[TEMP].key[KEY_PRESS].ctrl) {
             gimbal_cmd_send.yaw   = (float)rc_data[TEMP].mouse.x / 660 * 0.05; // 系数待测
             gimbal_cmd_send.pitch = -(float)rc_data[TEMP].mouse.y / 660 * 1;
-            Vx_A                  = PRE_SPEED_UP * 2 * (abs(Speed_vx) / PRE_SPEED_UP) + PRE_SPEED_UP;
-            Vy_A                  = PRE_SPEED_UP * 2 * (abs(Speed_vy) / PRE_SPEED_UP) + PRE_SPEED_UP;
+            Vx_A                  =  PRE_SPEED_UP;
+            Vy_A                  =  PRE_SPEED_UP;
             if (rc_data[TEMP].key[KEY_PRESS].w && !rc_data[TEMP].key[KEY_PRESS].s) {
                 Speed_vy += Vy_A;
                 if (Speed_vy > maxspeed_chassis)
@@ -387,6 +387,7 @@ void Get_UI_Data() // 将裁判系统数据和机器人状态传入UI
     UI_data.Max_HP       = referee_data.GameRobotState.max_HP;
     UI_data.Angle        = chassis_cmd_send.offset_angle;
     UI_data.CapVot       = cap_UI.cap_msg_s.CapVot;
+    UI_data.Max_power=referee_data.GameRobotState.chassis_power_limit;
     static int double_to_int;
     double_to_int         = UI_data.CapVot * 10;
     UI_data.CapVot        = double_to_int;

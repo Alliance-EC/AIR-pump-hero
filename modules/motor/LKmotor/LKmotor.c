@@ -17,15 +17,15 @@ static LKMotorInstance *lkmotor_instance[LK_MOTOR_MX_CNT] = {NULL};
  */
 static void LKMotorDecode(CANInstance *_instance)
 {
-    LKMotorInstance *motor = (LKMotorInstance *)_instance->id; // 通过caninstance保存的father id获取对应的motorinstance
+    LKMotorInstance *motor     = (LKMotorInstance *)_instance->id; // 通过caninstance保存的father id获取对应的motorinstance
     LKMotor_Measure_t *measure = &motor->measure;
-    uint8_t *rx_buff = _instance->rx_buff;
+    uint8_t *rx_buff           = _instance->rx_buff;
 
     DaemonReload(motor->daemon); // 喂狗
     measure->feed_dt = DWT_GetDeltaT(&measure->feed_dwt_cnt);
 
     measure->last_ecd = measure->ecd;
-    measure->ecd = (uint16_t)((rx_buff[7] << 8) | rx_buff[6]);
+    measure->ecd      = (uint16_t)((rx_buff[7] << 8) | rx_buff[6]);
 
     // measure->angle_single_round = ECD_ANGLE_COEF_LK * measure->ecd;
     // todo:优化
@@ -38,10 +38,10 @@ static void LKMotorDecode(CANInstance *_instance)
                             CURRENT_SMOOTH_COEF * (float)((int16_t)(rx_buff[3] << 8 | rx_buff[2]));
 
     measure->temperature = rx_buff[1];
-    
-    if ((int16_t)measure->ecd - measure->last_ecd > measure->max_ecd/2)
+
+    if ((int16_t)measure->ecd - measure->last_ecd > measure->max_ecd / 2)
         measure->total_round--;
-    else if ((int16_t)measure->ecd - measure->last_ecd < -measure->max_ecd/2)
+    else if ((int16_t)measure->ecd - measure->last_ecd < -measure->max_ecd / 2)
         measure->total_round++;
 
     measure->total_angle = measure->total_round * 360 + measure->angle_single_round;
@@ -68,14 +68,17 @@ LKMotorInstance *LKMotorInit(Motor_Init_Config_s *config)
     PIDInit(&motor->angle_PID, &config->controller_param_init_config.angle_PID);
     motor->other_angle_feedback_ptr = config->controller_param_init_config.other_angle_feedback_ptr;
     motor->other_speed_feedback_ptr = config->controller_param_init_config.other_speed_feedback_ptr;
-    motor->motor_contro_type = config->motor_contro_type;
+    motor->motor_contro_type        = config->motor_contro_type;
 
     motor->motor_type = config->motor_type;
-    switch(motor->motor_type){
+    switch (motor->motor_type) {
         case LK_MS5005:
             motor->measure.max_ecd = 32768;
             break;
         case LK9025:
+            motor->measure.max_ecd = 16383;
+            break;
+        case LK5010E:
             motor->measure.max_ecd = 16383;
             break;
         default: // other motors should not be registered here
@@ -83,9 +86,9 @@ LKMotorInstance *LKMotorInit(Motor_Init_Config_s *config)
                 LOGERROR("[dji_motor]You must not register other motors using the API of DJI motor."); // 其他电机不应该在这里注册
     }
 
-    config->can_init_config.id = motor;
+    config->can_init_config.id                  = motor;
     config->can_init_config.can_module_callback = LKMotorDecode;
-    config->can_init_config.rx_id = 0x140 + config->can_init_config.tx_id;
+    config->can_init_config.rx_id               = 0x140 + config->can_init_config.tx_id;
     // 多电机发送需要在上位机中开启，因为臂臂上只有一个LK电机，暂时不用
     // config->can_init_config.tx_id = config->can_init_config.tx_id + 0x280 - 1; // 这样在发送写入buffer的时候更方便,因为下标从0开始,LK多电机发送id为0x280
     // if (idx == 0) // 用第一个电机的can instance发送数据
@@ -94,15 +97,15 @@ LKMotorInstance *LKMotorInit(Motor_Init_Config_s *config)
     //     sender_instance->tx_id = 0x280; //  修改tx_id为0x280,用于多电机发送,不用管其他LKMotorInstance的tx_id,它们仅作初始化用
     // }
     config->can_init_config.tx_id = 0x140 + config->can_init_config.tx_id;
-    motor->motor_can_ins = CANRegister(&config->can_init_config);    
+    motor->motor_can_ins          = CANRegister(&config->can_init_config);
 
     LKMotorStop(motor);
     DWT_GetDeltaT(&motor->measure.feed_dwt_cnt);
     lkmotor_instance[idx++] = motor;
 
     Daemon_Init_Config_s daemon_config = {
-        .callback = LKMotorLostCallback,
-        .owner_id = motor,
+        .callback     = LKMotorLostCallback,
+        .owner_id     = motor,
         .reload_count = 2, // 50ms
     };
     motor->daemon = DaemonRegister(&daemon_config);
@@ -119,17 +122,15 @@ void LKMotorControl()
     LKMotor_Measure_t *measure;
     Motor_Control_Setting_s *setting;
 
-    for (size_t i = 0; i < idx; ++i)
-    {
-        motor = lkmotor_instance[i];
+    for (size_t i = 0; i < idx; ++i) {
+        motor   = lkmotor_instance[i];
         measure = &motor->measure;
         setting = &motor->motor_settings;
         pid_ref = motor->pid_ref;
 
         /* 扭矩开环控制 */
-        if (motor->motor_contro_type == TORQUE_LOOP_CONTRO){
-            if ((setting->close_loop_type & ANGLE_LOOP) && setting->outer_loop_type == ANGLE_LOOP)
-            {
+        if (motor->motor_contro_type == TORQUE_LOOP_CONTRO) {
+            if ((setting->close_loop_type & ANGLE_LOOP) && setting->outer_loop_type == ANGLE_LOOP) {
                 if (setting->angle_feedback_source == OTHER_FEED)
                     pid_measure = *motor->other_angle_feedback_ptr;
                 else
@@ -139,12 +140,11 @@ void LKMotorControl()
                     pid_ref += *motor->speed_feedforward_ptr;
             }
 
-            //反转检测
+            // 反转检测
             if (setting->motor_reverse_flag == MOTOR_DIRECTION_REVERSE)
                 pid_ref *= -1;
 
-            if ((setting->close_loop_type & SPEED_LOOP) && setting->outer_loop_type & (ANGLE_LOOP | SPEED_LOOP))
-            {
+            if ((setting->close_loop_type & SPEED_LOOP) && setting->outer_loop_type & (ANGLE_LOOP | SPEED_LOOP)) {
                 if (setting->speed_feedback_source == OTHER_FEED)
                     pid_measure = *motor->other_speed_feedback_ptr;
                 else
@@ -154,31 +154,29 @@ void LKMotorControl()
                     pid_ref += *motor->current_feedforward_ptr;
             }
 
-            if (setting->close_loop_type & CURRENT_LOOP)
-            {
+            if (setting->close_loop_type & CURRENT_LOOP) {
                 pid_ref = PIDCalculate(&motor->current_PID, measure->real_current, pid_ref);
             }
 
             set = pid_ref;
-            
+
             // 同上，暂时不采用多电机发送
             // 这里随便写的,为了兼容多电机命令.后续应该将tx_id以更好的方式表达电机id,单独使用一个CANInstance,而不是用第一个电机的CANInstance
             // memcpy(sender_instance->tx_buff + (motor->motor_can_ins->tx_id - 0x280) * 2, &set, sizeof(uint16_t));
-            memcpy(motor->motor_can_ins->tx_buff + 4, (uint8_t*)&set, sizeof(uint16_t));
+            memcpy(motor->motor_can_ins->tx_buff + 4, (uint8_t *)&set, sizeof(uint16_t));
             motor->motor_can_ins->tx_buff[0] = 0xA0;
 
-            if (motor->stop_flag == MOTOR_STOP || !LKMotorIsOnline(motor))
-            { // 若该电机处于停止状态,直接将发送buff置零
+            if (motor->stop_flag == MOTOR_STOP || !LKMotorIsOnline(motor)) { // 若该电机处于停止状态,直接将发送buff置零
                 // 同上，暂时不采用多电机发送
                 // memset(sender_instance->tx_buff + (motor->motor_can_ins->tx_id - 0x280) * 2, 0, sizeof(uint16_t));
                 memset(motor->motor_can_ins->tx_buff + 4, 0, sizeof(uint16_t));
             }
-            
+
             CANTransmit(motor->motor_can_ins, 2);
             // if (idx) // 如果有电机注册了
             //     CANTransmit(sender_instance, 0.2);
-        }else if(motor->motor_contro_type == ANGLE_LOOP_CONTRO){
-            memcpy(motor->motor_can_ins->tx_buff + 4, (uint8_t*)&pid_ref, sizeof(uint16_t));
+        } else if (motor->motor_contro_type == ANGLE_LOOP_CONTRO) {
+            memcpy(motor->motor_can_ins->tx_buff + 4, (uint8_t *)&pid_ref, sizeof(uint16_t));
             motor->motor_can_ins->tx_buff[0] = 0xA3;
             CANTransmit(motor->motor_can_ins, 2);
         }

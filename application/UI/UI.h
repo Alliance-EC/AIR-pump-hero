@@ -58,8 +58,9 @@ typedef struct
     int Frition_speed;
     uint8_t Shoot_enemy;
     uint8_t Bullet_empty;
+    int Max_power;
     //Shoot_Step Air_ready;
-}UIdate_for_change;
+}UIdate_for_change;//UI更新所需要的数据
 extern UI_Graph_Instance *UI_LINE_Init(char Name[3], int8_t color, int8_t layer, int8_t width, int16_t startx, int16_t starty, int16_t endx, int16_t endy);
 extern void UI_DEBUG_MODE(uint8_t CNT,int px,int py);
 extern void MyUIInit(void);

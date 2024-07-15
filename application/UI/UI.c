@@ -15,7 +15,7 @@ static char char_pitch[50];
 // static char char_rotate_mode[50];
 // static String_Data_t Robot1, Robot2, Robot3, Robot4, Robot5, Robotsentry;
 // static Graph_Data_t Robot1HP, Robot2HP, Robot3HP, Robot4HP, Robot5HP, RobotsentryHP;
-static Graph_Data_t Line_fuzhu_base1,Line_fuzhu_base2;
+static Graph_Data_t Line_fuzhu_base1, Line_fuzhu_base2;
 static Graph_Data_t Line_fuzhu_5m, Line_fuzhu_10m, Line_fuzhu_8m;
 static Graph_Data_t Line_fuzhu_outposefirst1, Line_fuzhu_outposefirst2;
 // 辅助线图形变量
@@ -30,6 +30,7 @@ static String_Data_t Load_moad;
 static UIdate_for_change UI_last;
 static Graph_Data_t NUMX;
 static Graph_Data_t NUMY;
+static Graph_Data_t MAX_POWER;
 static Graph_Data_t Pitch_angle;
 static Graph_Data_t Friction_speed;
 static UIdate_for_change *UI_Now;
@@ -41,7 +42,7 @@ int UI_flag_second = 0;
 #define MAX_UI_INSTANCE 30
 static UI_Graph_Instance *UI_INSTANCE[MAX_UI_INSTANCE];
 static int8_t CNT_UI;
-
+static int tick_num_bulletUI;
 UI_Graph_Instance *UI_LINE_Init(char Name[3], int8_t color, int8_t layer, int8_t width, int16_t startx, int16_t starty, int16_t endx, int16_t endy)
 {
     UI_Graph_Instance *UI_instance = (UI_Graph_Instance *)malloc(sizeof(UI_Graph_Instance));
@@ -99,24 +100,23 @@ void get_referee_data(referee_info_t *referee_data)
     referee_data_for_ui->referee_id.Cilent_ID         = 0x0100 + referee_data->referee_id.Robot_ID; // 计算客户端ID
     referee_data_for_ui->referee_id.Receiver_Robot_ID = 0;
 }
-void UI_DEBUG_MODE(uint8_t CNT,int px,int py)
+void UI_DEBUG_MODE(uint8_t CNT, int px, int py)
 {
     if (CNT == 0) {
-        Outpose_X=Center_outpose_firstX-px;
-        Outpose_Y=Center_outpose_firstY-py;
+        Outpose_X = Center_outpose_firstX - px;
+        Outpose_Y = Center_outpose_firstY - py;
         UIIntDraw(&NUMX, "NMX", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 600, SCREEN_WIDTH / 2 - 100, Outpose_X);
         UIIntDraw(&NUMY, "NMY", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 100, Outpose_Y);
         UILineDraw(&Line_fuzhu_outposefirst1, "FO1", Graphic_Operate_CHANGE, 5, Graphic_Color_Yellow, 2, Outpose_X + 20, Outpose_Y, Outpose_X - 20, Outpose_Y);
         UILineDraw(&Line_fuzhu_outposefirst2, "FO2", Graphic_Operate_CHANGE, 5, Graphic_Color_Yellow, 2, Outpose_X, Outpose_Y + 20, Outpose_X, Outpose_Y - 20
-        
-        
+
         );
         UIGraphRefresh(&referee_data_for_ui->referee_id, 2, NUMX, NUMY);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 2, Line_fuzhu_outposefirst1, Line_fuzhu_outposefirst2);
     }
     if (CNT == 1) {
-        Outpose_X=Center_base_7m_X-px;
-        Outpose_Y=Center_base_7m_Y-py;
+        Outpose_X = Center_base_7m_X - px;
+        Outpose_Y = Center_base_7m_Y - py;
         UIIntDraw(&NUMX, "NMX", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 600, SCREEN_WIDTH / 2 - 100, Center_base_7m_X);
         UIIntDraw(&NUMY, "NMY", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 100, Center_base_7m_Y);
         UILineDraw(&Line_fuzhu_base1, "FB1", Graphic_Operate_CHANGE, 5, Graphic_Color_Yellow, 2, Center_base_7m_X + 20, Center_base_7m_Y, Center_base_7m_X - 20, Center_base_7m_Y);
@@ -125,16 +125,16 @@ void UI_DEBUG_MODE(uint8_t CNT,int px,int py)
         UIGraphRefresh(&referee_data_for_ui->referee_id, 2, Line_fuzhu_base1, Line_fuzhu_base2);
     }
     if (CNT == 2) {
-        Outpose_X=Center_outpose_firstX-px;
-        Outpose_Y=Center_outpose_firstY-py;
+        Outpose_X = Center_outpose_firstX - px;
+        Outpose_Y = Center_outpose_firstY - py;
         UIIntDraw(&NUMX, "NMX", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 600, SCREEN_WIDTH / 2 - 100, Outpose_X);
         UIIntDraw(&NUMY, "NMY", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 100, Outpose_Y);
         UILineDraw(&Line_fuzhu_outposefirst1, "FO1", Graphic_Operate_CHANGE, 5, Graphic_Color_Yellow, 2, Outpose_X + 10, Outpose_Y, Outpose_X - 10, Outpose_Y);
         UILineDraw(&Line_fuzhu_outposefirst2, "FO2", Graphic_Operate_CHANGE, 5, Graphic_Color_Yellow, 2, Outpose_X, Outpose_Y + 10, Outpose_X, Outpose_Y - 10);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 2, NUMX, NUMY);
         UIGraphRefresh(&referee_data_for_ui->referee_id, 2, Line_fuzhu_outposefirst1, Line_fuzhu_outposefirst2);
-    }
-    else return;
+    } else
+        return;
 }
 static Graph_Data_t CAP_power;
 static uint8_t init_flag = 1;
@@ -203,8 +203,8 @@ void MyUIInit(void)
         //             Center_Of_Dirction_Y, Center_Of_Dirction_X, Center_Of_Dirction_Y + 30);
         //  UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_Chassis1);
         //  UIGraphRefresh(&referee_data_for_ui->referee_id, 1, Dirction_Chassis2);//云台yaw朝向初始化
-        UILineDraw(&Line_fuzhu_outposefirst1, "FO1", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, Center_outpose_firstX + 20, Center_outpose_firstY, Center_outpose_firstX - 20, Center_outpose_firstY);
-        UILineDraw(&Line_fuzhu_outposefirst2, "FO2", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, Center_outpose_firstX, Center_outpose_firstY + 20, Center_outpose_firstX, Center_outpose_firstY - 20);
+        UILineDraw(&Line_fuzhu_outposefirst1, "FO1", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, Center_base_7m_X + 20, Center_outpose_firstY, Center_base_7m_X - 20, Center_outpose_firstY);
+        UILineDraw(&Line_fuzhu_outposefirst2, "FO2", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, Center_outpose_firstX, Center_outpose_firstY + 20, Center_outpose_firstX, Center_outpose_firstY - 40);
         UILineDraw(&Line_fuzhu_base1, "FB1", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, Center_base_7m_X + 20, Center_base_7m_Y, Center_base_7m_X - 20, Center_base_7m_Y);
         UILineDraw(&Line_fuzhu_base2, "FB2", Graphic_Operate_ADD, 5, Graphic_Color_Yellow, 1, Center_base_7m_X, Center_base_7m_Y + 80, Center_base_7m_X, Center_base_7m_Y - 200);
 
@@ -225,7 +225,7 @@ void MyUIInit(void)
         UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
         UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
         // 弹量告急UI
-        UIGraphRefresh(&referee_data_for_ui->referee_id, 7, Shoot_enemy1, Shoot_enemy2, Bullet_worry1, Bullet_worry2, Bullet_worry3, Line_fuzhu_outposefirst1, Line_fuzhu_outposefirst2);
+
         if (UI_last.fri_mode == FRICTION_ON) {
             sprintf(friction_mode.show_Data, "BIU ON ");
             UICharDraw(&friction_mode, "002", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2, char_pitch);
@@ -238,7 +238,10 @@ void MyUIInit(void)
         UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_last.CapVot * 1000);
         UIFloatDraw(&Pitch_angle, "PTD", Graphic_Operate_ADD, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, UI_last.pitch_data * 1000);
         UIIntDraw(&Friction_speed, "FRS", Graphic_Operate_ADD, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 50, UI_last.Frition_speed);
-        UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Friction_speed, Pitch_angle, CAP_power, Line_fuzhu_base1,  Line_fuzhu_base2);
+        UIIntDraw(&MAX_POWER, "MAP", Graphic_Operate_ADD, 9, Graphic_Color_Pink, 30, 2, Max_Power_X, Max_Power_Y, UI_last.Max_power);
+        UIGraphRefresh(&referee_data_for_ui->referee_id, 7, Shoot_enemy1, Shoot_enemy2, Bullet_worry1, Bullet_worry2, Bullet_worry3, Line_fuzhu_outposefirst1, Line_fuzhu_outposefirst2);
+        UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Friction_speed, Pitch_angle, CAP_power, Line_fuzhu_base1, Line_fuzhu_base2);
+        UIGraphRefresh(&referee_data_for_ui->referee_id, 1, MAX_POWER);
         UI_flag_second = 1;
     } else {
         MyUIRefresh();
@@ -313,11 +316,7 @@ void MyUIRefresh(void)
     // UICharDraw(&rotate_mode, "003", Graphic_Operate_DEL, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 400, SCREEN_WIDTH / 2 + 200, char_pitch);
     // UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_DEL, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_Now->CapVot * 1000);
     // UIFloatDraw(&Pitch_angle, "PTD", Graphic_Operate_DEL, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, UI_Now->pitch_data * 1000);
-    if (UI_Now->load_Mode == One_shoot_mdoe
-    
-    
-    
-    ) {
+    if (UI_Now->load_Mode == One_shoot_mdoe) {
         sprintf(Load_moad.show_Data, "ONE_SHOOT");
         UICharDraw(&Load_moad, "LDM", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 + 300, SCREEN_WIDTH / 2 + 200, char_pitch);
 
@@ -334,15 +333,16 @@ void MyUIRefresh(void)
         UICharDraw(&friction_mode, "002", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 2, SCREEN_LENGTH / 2 - 350, SCREEN_WIDTH / 2, char_pitch);
     } // 摩擦轮状态更新
     UIIntDraw(&Friction_speed, "FRS", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 30, 2, SCREEN_LENGTH / 2 - 350, SCREEN_WIDTH / 2 + 50, UI_last.Frition_speed);
+    UIIntDraw(&MAX_POWER, "MAP", Graphic_Operate_CHANGE, 9, Graphic_Color_Pink, 30, 2, Max_Power_X, Max_Power_Y, UI_last.Max_power);
 
     UICircleDraw(&Dirction_Chassis1, "CD1", Graphic_Operate_CHANGE, 9, Graphic_Color_Pink, 1,
-                 Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 90) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 90) * DEGREE_2_RAD), 8);
+                 Center_Of_Dirction_X + 40 * arm_cos_f32((-UI_Now->Angle + 90) * DEGREE_2_RAD), Center_Of_Dirction_Y + 40 * arm_sin_f32((-UI_Now->Angle + 90) * DEGREE_2_RAD), 8);
     UICircleDraw(&Dirction_Chassis2, "CD2", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 1,
-                 Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 180) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 180) * DEGREE_2_RAD), 8);
+                 Center_Of_Dirction_X + 40 * arm_cos_f32((-UI_Now->Angle + 180) * DEGREE_2_RAD), Center_Of_Dirction_Y + 40 * arm_sin_f32((-UI_Now->Angle + 180) * DEGREE_2_RAD), 8);
     UICircleDraw(&Dirction_Chassis3, "CD3", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 1,
-                 Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 270) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 270) * DEGREE_2_RAD), 8);
+                 Center_Of_Dirction_X + 40 * arm_cos_f32((-UI_Now->Angle + 270) * DEGREE_2_RAD), Center_Of_Dirction_Y + 40 * arm_sin_f32((-UI_Now->Angle + 270) * DEGREE_2_RAD), 8);
     UICircleDraw(&Dirction_Chassis4, "CD4", Graphic_Operate_CHANGE, 9, Graphic_Color_White, 1,
-                 Center_Of_Dirction_X + 80 * arm_cos_f32((-UI_Now->Angle + 360) * DEGREE_2_RAD), Center_Of_Dirction_Y + 80 * arm_sin_f32((-UI_Now->Angle + 360) * DEGREE_2_RAD), 8);
+                 Center_Of_Dirction_X + 40 * arm_cos_f32((-UI_Now->Angle + 360) * DEGREE_2_RAD), Center_Of_Dirction_Y + 40 * arm_sin_f32((-UI_Now->Angle + 360) * DEGREE_2_RAD), 8);
 
     if (UI_Now->chassis_mode == CHASSIS_FOLLOW_GIMBAL_YAW) {
         sprintf(rotate_mode.show_Data, "FOLLOW");
@@ -355,6 +355,26 @@ void MyUIRefresh(void)
         UICharDraw(&rotate_mode, "003", Graphic_Operate_CHANGE, 9, Graphic_Color_Orange, 30, 2, SCREEN_LENGTH / 2 - 350, SCREEN_WIDTH / 2 + 200, char_pitch);
     } // 底盘状态更新
 
+    switch (UI_Now->Bullet_empty) {
+        case 0:
+            UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 40, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
+            UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
+            UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
+            break;
+        case 1:
+            tick_num_bulletUI++;
+            if (tick_num_bulletUI > 5) {
+                UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 80, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
+                UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
+                UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
+            }
+            if (tick_num_bulletUI < 5) {
+                UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 40, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
+                UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
+                UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
+            }
+            tick_num_bulletUI %= 10;
+    }
     if (UI_Now->Shoot_enemy == 1) {
         UILineDraw(&Shoot_enemy1, "SE1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, SCREEN_LENGTH / 2 + 40, SCREEN_WIDTH / 2 + 40, SCREEN_LENGTH / 2 - 40, SCREEN_WIDTH / 2 - 40);
         UILineDraw(&Shoot_enemy2, "SE2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, SCREEN_LENGTH / 2 - 40, SCREEN_WIDTH / 2 + 40, SCREEN_LENGTH / 2 + 40, SCREEN_WIDTH / 2 - 40);
@@ -362,16 +382,8 @@ void MyUIRefresh(void)
         UILineDraw(&Shoot_enemy1, "SE1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 1, SCREEN_LENGTH + 80, SCREEN_WIDTH + 80, SCREEN_LENGTH - 80, SCREEN_WIDTH - 80);
         UILineDraw(&Shoot_enemy2, "SE2", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 1, SCREEN_LENGTH - 80, SCREEN_WIDTH + 80, SCREEN_LENGTH + 80, SCREEN_WIDTH - 80);
     }
-    if (UI_Now->Bullet_empty == 1) {
-        UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 80, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
-        UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
-        UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_ADD, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
-    } else {
-        UILineDraw(&Bullet_worry1, "BW1", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X - 40, Center_bullet_worry_Y, Center_bullet_worry_X + 40, Center_bullet_worry_Y);
-        UILineDraw(&Bullet_worry2, "BW2", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y - 20);
-        UILineDraw(&Bullet_worry3, "BW3", Graphic_Operate_DEL, 5, Graphic_Color_Purplish_red, 4, Center_bullet_worry_X + 40, Center_bullet_worry_Y, Center_bullet_worry_X + 20, Center_bullet_worry_Y + 20);
-    }
     UIGraphRefresh(&referee_data_for_ui->referee_id, 5, Shoot_enemy1, Shoot_enemy2, Bullet_worry1, Bullet_worry2, Bullet_worry3);
+    UIGraphRefresh(&referee_data_for_ui->referee_id, 1, MAX_POWER);
 
     UIFloatDraw(&CAP_power, "CAP", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2, SCREEN_WIDTH / 2 - 300, UI_Now->CapVot * 100);
     UIFloatDraw(&Pitch_angle, "PTD", Graphic_Operate_CHANGE, 9, Graphic_Color_Yellow, 30, 0, 2, SCREEN_LENGTH / 2 + 100, SCREEN_WIDTH / 2, UI_Now->pitch_data * 100);
