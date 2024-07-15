@@ -2,6 +2,7 @@
 #include "motor_def.h"
 #include "robot_def.h"
 #include "dji_motor.h"
+#include "LKmotor.h"
 #include "servo_motor.h"
 #include "ins_task.h"
 #include "message_center.h"
@@ -16,7 +17,7 @@ static uint8_t down_flag, up_flag;  // DEBUG
 static ServoInstance *image_module; // 图传舵机
 static ServoInstance *sight_module; // 望远镜舵机
 INS_Instance *gimbal_IMU_data;      // 云台IMU数据
-static DJIMotorInstance *yaw_motor, *pitch_motor;
+static LKMotorInstance *yaw_motor, *pitch_motor;
 // 转存遥控器数据，避免在数据传输时使用+=，减轻调试负担
 float yaw_input;
 float pitch_input;
@@ -115,13 +116,13 @@ void GimbalInit()
                 .MaxOut = 500,
             },
             .speed_PID = {
-                .Kp            = 20000, // 50
+                .Kp            = 1000, // 50
                 .Ki            = 10,    // 200
                 .Kd            = 0,
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 4000,
                 .DeadBand      = 0,
-                .MaxOut        = 30000,
+                .MaxOut        = 2000,
             },
             .other_angle_feedback_ptr = &gimbal_IMU_data->output.Yaw_total_angle,
             // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
@@ -135,7 +136,7 @@ void GimbalInit()
             .motor_reverse_flag    = MOTOR_DIRECTION_REVERSE,
             .feedback_reverse_flag = FEEDBACK_DIRECTION_REVERSE,
         },
-        .motor_type = GM6020};
+        .motor_type = LK5010E};
     // PITCH
     Motor_Init_Config_s pitch_config = {
         .can_init_config = {
@@ -152,13 +153,13 @@ void GimbalInit()
                 .MaxOut        = 500,
             },
             .speed_PID = {
-                .Kp            = 20000, // 50
+                .Kp            = 1000, // 50
                 .Ki            = 2,     // 350
                 .Kd            = 0,     // 0
                 .Improve       = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .IntegralLimit = 5000,
                 .DeadBand      = 0,
-                .MaxOut        = 25000,
+                .MaxOut        = 2000,
             },
             .other_angle_feedback_ptr = &gimbal_IMU_data->output.INS_angle[1],
             // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
@@ -171,11 +172,11 @@ void GimbalInit()
             .close_loop_type       = SPEED_LOOP | ANGLE_LOOP,
             .motor_reverse_flag    = MOTOR_DIRECTION_REVERSE,
         },
-        .motor_type = GM6020,
+        .motor_type = LK5010E,
     };
     // 电机对total_angle闭环,上电时为零,会保持静止,收到遥控器数据再动
-    yaw_motor   = DJIMotorInit(&yaw_config);
-    pitch_motor = DJIMotorInit(&pitch_config);
+    yaw_motor   = LKMotorInit(&yaw_config);
+    pitch_motor = LKMotorInit(&pitch_config);
 #ifdef GIMBAL_BOARD
     CANComm_Init_Config_s comm_conf = {
         .can_config = {
@@ -226,19 +227,19 @@ void GimbalTask()
         switch (gimbal_cmd_recv.gimbal_mode) {
             // 停止
             case GIMBAL_ZERO_FORCE:
-                DJIMotorStop(yaw_motor);
-                DJIMotorStop(pitch_motor);
+                // DJIMotorStop(yaw_motor);
+                // DJIMotorStop(pitch_motor);
                 break;
             case GIMBAL_GYRO_MODE:
                 GimbalInputGet();
-                DJIMotorEnable(yaw_motor);
-                DJIMotorEnable(pitch_motor);
-                DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
-                DJIMotorChangeFeed(yaw_motor, SPEED_LOOP, OTHER_FEED);
-                DJIMotorChangeFeed(pitch_motor, ANGLE_LOOP, OTHER_FEED);
-                DJIMotorChangeFeed(pitch_motor, SPEED_LOOP, OTHER_FEED);
-                DJIMotorSetRef(yaw_motor, yaw_input);
-                DJIMotorSetRef(pitch_motor, pitch_input);
+                // DJIMotorEnable(yaw_motor);
+                // DJIMotorEnable(pitch_motor);
+                // DJIMotorChangeFeed(yaw_motor, ANGLE_LOOP, OTHER_FEED);
+                // DJIMotorChangeFeed(yaw_motor, SPEED_LOOP, OTHER_FEED);
+                // DJIMotorChangeFeed(pitch_motor, ANGLE_LOOP, OTHER_FEED);
+                // DJIMotorChangeFeed(pitch_motor, SPEED_LOOP, OTHER_FEED);
+                // DJIMotorSetRef(yaw_motor, yaw_input);
+                // DJIMotorSetRef(pitch_motor, pitch_input);
                 break;
             default:
                 break;
@@ -253,8 +254,8 @@ void GimbalTask()
         // 推送消息
 
     } else {
-        DJIMotorStop(yaw_motor);
-        DJIMotorStop(pitch_motor);
+        // DJIMotorStop(yaw_motor);
+        // DJIMotorStop(pitch_motor);
     }
 #ifdef ONE_BROAD
     PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);
